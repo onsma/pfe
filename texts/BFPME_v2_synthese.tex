@@ -1,0 +1,381 @@
+% ============================================================
+%  BFPME_2 — RAPPORT DE SYNTHÈSE (PHASE 2 : DONNÉES RÉELLES)
+%  Chapitre 1 : jeux de données externes (réels, publics)
+%  Chapitre 2 : données réelles de la BFPME
+%  Tous les chiffres proviennent des résultats calculés du projet bfpme_2.
+% ============================================================
+\documentclass[a4paper,11pt]{report}
+
+% ── Encodage et langue ───────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ── Mise en page ─────────────────────────────────────────────
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% ── Couleurs ─────────────────────────────────────────────────
+\usepackage[dvipsnames,svgnames,table]{xcolor}
+% Tout le texte en noir : BfRed et DarkGray redéfinis en noir pur.
+% (Les gris clairs ne servent qu'au remplissage des figures.)
+\definecolor{BfRed}{RGB}{0, 0, 0}
+\definecolor{DarkGray}{RGB}{0, 0, 0}
+\definecolor{LightGray}{RGB}{235, 235, 235}
+\definecolor{MidGray}{RGB}{150, 150, 150}
+\definecolor{GoodGreen}{RGB}{0, 0, 0}
+
+% ── Graphiques ───────────────────────────────────────────────
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit}
+
+% ── Titres ───────────────────────────────────────────────────
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+  {\normalfont\bfseries\color{BfRed}}
+  {\Large CHAPITRE \thechapter}{6pt}{\Huge}
+\titlespacing*{\chapter}{0pt}{-20pt}{24pt}
+\titleformat{\section}{\normalfont\Large\bfseries\color{BfRed}}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries\color{DarkGray}}{\thesubsection}{0.6em}{}
+
+% ── Tableaux et listes ───────────────────────────────────────
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=1.6em, itemsep=2pt, topsep=3pt}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+
+% ── Mathématiques ────────────────────────────────────────────
+\usepackage{amsmath, amssymb}
+
+% ── En-tête / pied ───────────────────────────────────────────
+\usepackage{fancyhdr}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\textit{BFPME\_2 — Synthèse phase~2}}
+\fancyhead[R]{\small Données réelles \& externes}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\setlength{\headheight}{14.5pt}
+
+% ── Légendes ─────────────────────────────────────────────────
+\usepackage{caption}
+\captionsetup{labelsep=endash, font=small, labelfont=bf, justification=centering}
+
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=BfRed, urlcolor=BfRed, citecolor=BfRed}
+
+% ── Barre de métrique horizontale : \aucbar{y}{label}{val}{couleur} ──
+\newcommand{\aucbar}[4]{%
+  \node[anchor=east, font=\small] at (0,#1) {#2};
+  \draw[fill=LightGray, draw=MidGray] (0.2,{#1-0.2}) rectangle (6.2,{#1+0.2});
+  \draw[fill=#4, draw=#4] (0.2,{#1-0.2}) rectangle ({0.2+6.0*#3},{#1+0.2});
+  \node[anchor=west, font=\small\bfseries] at (6.35,#1) {#3};
+}
+
+\begin{document}
+
+% ── Page de titre ────────────────────────────────────────────
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+{\Huge\bfseries\color{BfRed} BFPME\_2\par}
+\vspace{0.4cm}
+{\Large Confrontation aux données réelles~: jeux externes et dossiers BFPME\par}
+\vspace{1.2cm}
+\rule{0.8\textwidth}{1.5pt}\par
+\vspace{0.8cm}
+{\LARGE\bfseries Rapport de synthèse — Phase~2\par}
+\vspace{0.3cm}
+{\large Chapitre~1 : jeux de données externes\\Chapitre~2 : données réelles de la BFPME\par}
+\vspace{0.6cm}
+{\large\itshape Travaux, méthodes, résultats et illustrations\par}
+\vspace{1cm}
+\rule{0.8\textwidth}{1.5pt}\par
+\vfill
+{\large Société d'accueil~: MPSoft\par}
+{\large Projet de fin d'études\par}
+\vspace{1cm}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ── Introduction ─────────────────────────────────────────────
+\chapter*{Introduction}
+\addcontentsline{toc}{chapter}{Introduction}
+
+La phase~1 (rapport \textit{BFPME}) a validé, sur données \emph{synthétiques}, une chaîne
+complète de prédiction, d'explication et de test de stress du risque de crédit PME. La phase~2
+confronte cette approche au \textbf{réel}, selon deux axes traités chacun dans un chapitre~:
+
+\begin{itemize}
+  \item \textbf{Chapitre~1 — Jeux de données externes.} La méthodologie BFPME est répliquée à
+        l'identique sur deux jeux de crédit \emph{publics et réels} (Taïwan, Home Credit) afin
+        d'éprouver sa transférabilité hors du cadre du projet.
+  \item \textbf{Chapitre~2 — Données réelles de la BFPME.} Les 1\,226~dossiers réels de la banque
+        servent d'abord de \emph{jeu de validation externe} pour mesurer si le modèle synthétique
+        généralise, puis de base d'un modèle entraîné \emph{directement} sur le réel.
+\end{itemize}
+
+\noindent Chaque chapitre suit la même trame~: objectifs, méthodes, résultats et illustrations.
+Le fil conducteur est la \textbf{crédibilité}~: un score élevé n'a de valeur que s'il survit au
+contact des dossiers réels.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm and 12mm,
+   src/.style={draw=DarkGray, thick, rounded corners=2pt, fill=LightGray,
+               text width=3.2cm, minimum height=1.1cm, align=center, font=\scriptsize},
+   core/.style={draw=BfRed, very thick, rounded corners=5pt, fill=white,
+                text width=3cm, minimum height=1.3cm, align=center, font=\scriptsize\bfseries},
+   fl/.style={-{Stealth[length=2.2mm]}, thick, DarkGray}]
+  \node[src] (ext) {Jeux externes réels\\Taïwan · Home Credit\\(chap.~1)};
+  \node[src, below=of ext] (real) {Dossiers réels BFPME\\1\,226 lignes (chap.~2)};
+  \node[core, right=of $(ext)!0.5!(real)$] (pipe) {Méthodologie BFPME\\(prétraitement, modèle, XAI)};
+  \node[src, right=of pipe] (val) {Validation \&\\gouvernance};
+  \draw[fl] (ext) -- (pipe);
+  \draw[fl] (real) -- (pipe);
+  \draw[fl] (pipe) -- (val);
+\end{tikzpicture}
+\caption{Deux sources de données réelles éprouvant la même méthodologie}
+\end{figure}
+
+% ============================================================
+\chapter{Jeux de données externes}
+% ============================================================
+
+\section{Objectifs}
+
+Avant d'exploiter les données internes de la banque, la méthodologie BFPME (préparation,
+\textit{feature engineering}, modélisation XGBoost / RandomForest, comparaison par bootstrap
+apparié) est \textbf{répliquée à l'identique} sur deux jeux de crédit publics et réels. Objectif~:
+vérifier que le pipeline se transpose à d'autres populations et produit des performances
+crédibles sur des données non issues du générateur BFPME.
+
+\section{Méthodes}
+
+Les deux jeux suivent exactement la chaîne des notebooks BFPME (\texttt{01\_préparation},
+\texttt{02\_xgboost}, \texttt{03\_randomforest}, \texttt{04\_comparaison})~: nettoyage,
+ingénierie de variables métier, préprocessing sans fuite de cible, évaluation en validation
+croisée \textit{out-of-fold} (AUC / Gini / KS / PR-AUC), hold-out avec intervalle de confiance
+bootstrap, puis désignation du modèle retenu.
+
+\begin{table}[H]
+\centering
+\caption{Jeux de données externes réels étudiés}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l Y C C@{}}
+\toprule
+\textbf{Jeu} & \textbf{Nature} & \textbf{\# clients} & \textbf{Taux de défaut} \\
+\midrule
+Credit Card Taïwan (UCI) & Table unique, 6 mois d'historique de paiement & 30\,000 & $\approx$ 22\,\% \\
+Home Credit (Kaggle)     & 1 table principale + 6 tables satellites (relationnel) & 307\,511 & $\approx$ 8\,\% \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Résultats}
+
+Sur les deux jeux, XGBoost l'emporte sur RandomForest (bootstrap apparié, écart d'AUC
+significatif), avec des AUC de hold-out de l'ordre de \textbf{0{,}78}
+(tableau~\ref{tab:externes}, figure~\ref{fig:externes})~— des niveaux réalistes et cohérents
+avec l'état de l'art du \textit{credit scoring}.
+
+\begin{table}[H]
+\centering
+\caption{Résultats des jeux externes (hold-out ; modèle retenu en gras)}
+\label{tab:externes}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l l C C C@{}}
+\toprule
+\textbf{Jeu} & \textbf{Modèle} & \textbf{AUC} & \textbf{Gini} & \textbf{KS} \\
+\midrule
+\multirow{2}{*}{Credit Card Taïwan}
+  & \textbf{XGBoost}      & \textbf{0{,}782} & 0{,}565 & 0{,}431 \\
+  & RandomForest          & 0{,}779 & 0{,}557 & 0{,}428 \\
+\midrule
+\multirow{2}{*}{Home Credit}
+  & \textbf{XGBoost}      & \textbf{0{,}787} & 0{,}575 & 0{,}439 \\
+  & RandomForest          & 0{,}768 & 0{,}536 & 0{,}403 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+  \aucbar{0}{Taïwan · RandomForest}{0.779}{MidGray}
+  \aucbar{-0.7}{Taïwan · XGBoost}{0.782}{BfRed}
+  \aucbar{-1.6}{Home Credit · RandomForest}{0.768}{MidGray}
+  \aucbar{-2.3}{Home Credit · XGBoost}{0.787}{BfRed}
+\end{tikzpicture}
+\caption{AUC de hold-out sur les jeux externes réels (XGBoost en rouge)}
+\label{fig:externes}
+\end{figure}
+
+\noindent\textbf{Enseignement.} La méthodologie BFPME, appliquée sans modification à des données
+réelles publiques, atteint des performances solides et stables. Le pipeline est donc
+techniquement transférable~; reste à savoir s'il se transfère à la population \emph{spécifique}
+de la BFPME — c'est l'objet du chapitre~2.
+
+% ============================================================
+\chapter{Données réelles de la BFPME}
+% ============================================================
+
+\section{Objectifs}
+
+Ce chapitre exploite les \textbf{1\,226~dossiers réels} de la BFPME (fichier \texttt{Data.xlsx},
+taux de défaut réel \textbf{65,0\,\%}). Il répond à deux questions distinctes~:
+\begin{enumerate}[leftmargin=1.8em]
+  \item Le modèle entraîné sur les données \emph{synthétiques} de la phase~1 généralise-t-il aux
+        dossiers \emph{réels}~? (validation externe)
+  \item Que vaut un modèle entraîné \emph{directement} sur les données réelles~?
+\end{enumerate}
+
+\section{Validation externe du modèle synthétique}
+
+\subsection{Méthode}
+
+Plutôt que de \emph{fusionner} données synthétiques et réelles — impossible faute de clé
+commune et de schéma partagé — les dossiers réels sont utilisés comme \textbf{jeu de test
+indépendant} (validation externe). On ne conserve que les variables présentes des deux côtés et
+sans fuite de cible~: \texttt{log\_montant\_pret}, \texttt{log\_cout\_total},
+\texttt{ratio\_financement\_externe}, \texttt{secteur}, \texttt{objectif}. Trois mesures sont
+comparées, pour deux familles de modèles (régression logistique et gradient boosting)~:
+
+\begin{itemize}
+  \item \textbf{A} — AUC interne sur données synthétiques (le score « qu'on rapporterait »)~;
+  \item \textbf{B} — AUC sur les dossiers réels (généralisation effective)~;
+  \item \textbf{C} — AUC d'un modèle entraîné \emph{uniquement} sur le réel, sur ces mêmes
+        5~variables (plafond atteignable avec ce périmètre).
+\end{itemize}
+
+\subsection{Résultats : l'effondrement sur données réelles}
+
+\begin{table}[H]
+\centering
+\caption{Validation externe — synthétique vs.\ réel (5 variables partagées)}
+\label{tab:benchmark}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}Y C C@{}}
+\toprule
+\textbf{Mesure} & \textbf{Régression logistique} & \textbf{Gradient Boosting} \\
+\midrule
+A. AUC interne (synthétique) & \textbf{0{,}877} & \textbf{0{,}879} \\
+B. AUC externe (réel)        & 0{,}527 & 0{,}507 \\
+C. AUC réel seul (5 var.)    & 0{,}522 & 0{,}545 \\
+\midrule
+Écart de réalité (A $-$ B)   & 0{,}350 & 0{,}371 \\
+KS sur le réel (B)           & 0{,}088 & 0{,}058 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Le constat est \textbf{identique pour les deux familles de modèles} — c'est donc une propriété
+des \emph{données}, non d'un algorithme~:
+\begin{itemize}
+  \item sur données synthétiques, le modèle paraît excellent (AUC $\approx$ 0{,}88)~;
+  \item sur données réelles, il s'effondre à AUC $\approx$ 0{,}51 — l'équivalent d'un tirage à
+        pile ou face. Le modèle a appris les \emph{règles du générateur}, pas le risque de crédit~;
+  \item le plafond réel avec ces 5~variables (C $\approx$ 0{,}52) est lui aussi proche du hasard~:
+        ces variables partagées ne sont, à elles seules, \textbf{pas prédictives} du défaut réel.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+  \aucbar{0}{A · synthétique (interne)}{0.877}{BfRed}
+  \aucbar{-0.7}{B · réel (validation externe)}{0.527}{MidGray}
+  \aucbar{-1.4}{C · réel seul (5 var.)}{0.522}{MidGray}
+  \draw[dashed, DarkGray] ({0.2+6.0*0.5},0.3) -- ({0.2+6.0*0.5},-1.7)
+    node[below, font=\scriptsize\itshape]{hasard (0{,}50)};
+\end{tikzpicture}
+\caption{Écart de réalité (régression logistique)~: le score chute de 0{,}88 à 0{,}53}
+\label{fig:threeworlds}
+\end{figure}
+
+Le tri par PD prédite le rend concret~: le décile le \emph{moins} risqué (PD moyenne 6\,\%)
+fait tout de même défaut à \textbf{69,9\,\%} — autant que le décile le plus risqué. Le modèle
+synthétique ne \emph{classe} donc pas les emprunteurs réels.
+
+\section{Modèle entraîné directement sur le réel}
+
+\subsection{Méthode}
+
+Le second volet entraîne un modèle \emph{directement} sur les 1\,226~dossiers réels
+(\texttt{dataset\_clean.csv}), cette fois avec l'ensemble des \textbf{40~variables} réelles
+disponibles — et non plus les seules 5~variables partagées. Protocole~: validation croisée pour
+la sélection, hold-out final (980~dossiers d'apprentissage, 246~de test), et exploration de
+stratégies d'usage du signal de score BFPME.
+
+\subsection{Résultats}
+
+Avec ses 40~variables natives, le modèle réel dépasse nettement le plafond des 5~variables
+partagées (AUC 0{,}52) et atteint des niveaux exploitables (tableau~\ref{tab:realmodels}). Le
+RandomForest réglé est retenu~; sur le hold-out final il obtient
+\textbf{AUC~=~0{,}750}, \textbf{KS~=~0{,}430}, rappel~=~0{,}906.
+
+\begin{table}[H]
+\centering
+\caption{Comparaison des modèles sur données réelles (40 variables, validation croisée)}
+\label{tab:realmodels}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l C C C C@{}}
+\toprule
+\textbf{Modèle} & \textbf{AUC} & \textbf{Gini} & \textbf{KS} & \textbf{F1} \\
+\midrule
+\textbf{RandomForest réglé} & \textbf{0{,}719} & 0{,}438 & 0{,}317 & 0{,}782 \\
+RandomForest                & 0{,}716 & 0{,}431 & 0{,}325 & 0{,}796 \\
+XGBoost                     & 0{,}702 & 0{,}404 & 0{,}289 & 0{,}751 \\
+Régression logistique (base)& 0{,}675 & 0{,}351 & 0{,}275 & 0{,}720 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Modèle retenu sur le hold-out réel (RandomForest, \texttt{model\_metrics.json})}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}Y C C C C C@{}}
+\toprule
+\textbf{AUC} & \textbf{Gini} & \textbf{KS} & \textbf{Exactitude} & \textbf{Précision} & \textbf{Rappel} \\
+\midrule
+0{,}750 & 0{,}501 & 0{,}430 & 0{,}768 & 0{,}775 & 0{,}906 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent Les stratégies d'intégration du score BFPME officiel confirment un léger apport~: à
+partir des seules données (AUC 0{,}721), l'ajout de l'indicateur de présence de note porte l'AUC
+à 0{,}723. Le signal reste modeste, ce qui rejoint le diagnostic de la validation externe~: le
+pouvoir prédictif le plus fort réside dans des variables \emph{absentes} du fichier réel actuel
+(sous-facteurs \texttt{SF\_1..SF\_62}, ratios financiers granulaires, historique comportemental).
+
+% ── Conclusion ───────────────────────────────────────────────
+\chapter*{Conclusion}
+\addcontentsline{toc}{chapter}{Conclusion}
+
+La phase~2 apporte la preuve, chiffrée, de deux faits complémentaires. D'une part, la
+méthodologie BFPME est \textbf{techniquement solide}~: appliquée telle quelle à des jeux de
+crédit réels publics (Taïwan, Home Credit), elle atteint des AUC de l'ordre de 0{,}78. D'autre
+part, le modèle de la phase~1 \textbf{ne généralise pas} aux dossiers réels de la BFPME~: son
+AUC chute de 0{,}88 à 0{,}51, révélant que les performances synthétiques mesuraient la cohérence
+du générateur, non le risque de crédit réel.
+
+Confronté directement aux 1\,226~dossiers réels avec leurs 40~variables, un modèle atteint en
+revanche une AUC de \textbf{0{,}72–0{,}75}, exploitable mais bornée par la richesse limitée du
+fichier actuel. La conclusion opérationnelle est nette~: la valeur des données synthétiques était
+de valider le \emph{pipeline}~; la valeur des données réelles est de fournir la \emph{seule} base
+fiable pour un modèle déployable. La suite consiste à récupérer, dans le système d'information de
+la banque, les variables réellement prédictives (sous-facteurs de notation, ratios financiers
+détaillés, historique de paiement) absentes du fichier actuel, et à ré-entraîner le modèle sur
+cette base enrichie avant tout déploiement.
+
+\end{document}

@@ -1,0 +1,320 @@
+% ============================================================
+%  BFPME — RAPPORT DE SYNTHÈSE (PHASE 1 : DONNÉES SYNTHÉTIQUES)
+%  Résumé des travaux, méthodes, résultats et illustrations
+% ============================================================
+\documentclass[a4paper,11pt]{article}
+
+% ── Encodage et langue ───────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ── Mise en page ─────────────────────────────────────────────
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% ── Couleurs ─────────────────────────────────────────────────
+\usepackage[dvipsnames,svgnames,table]{xcolor}
+% Tout le texte en noir : BfRed et DarkGray redéfinis en noir pur.
+% (Les gris clairs ne servent qu'au remplissage des figures.)
+\definecolor{BfRed}{RGB}{0, 0, 0}
+\definecolor{DarkGray}{RGB}{0, 0, 0}
+\definecolor{LightGray}{RGB}{235, 235, 235}
+\definecolor{MidGray}{RGB}{150, 150, 150}
+
+% ── Graphiques ───────────────────────────────────────────────
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit}
+
+% ── Titres de section ────────────────────────────────────────
+\usepackage{titlesec}
+\titleformat{\section}{\normalfont\Large\bfseries\color{BfRed}}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries\color{DarkGray}}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{16pt}{8pt}
+
+% ── Tableaux et listes ───────────────────────────────────────
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=1.6em, itemsep=2pt, topsep=3pt}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+
+% ── Mathématiques ────────────────────────────────────────────
+\usepackage{amsmath, amssymb}
+
+% ── En-tête / pied ───────────────────────────────────────────
+\usepackage{fancyhdr}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\textit{BFPME — Synthèse phase~1}}
+\fancyhead[R]{\small Données synthétiques}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\setlength{\headheight}{14.5pt}
+
+% ── Légendes ─────────────────────────────────────────────────
+\usepackage{caption}
+\captionsetup{labelsep=endash, font=small, labelfont=bf, justification=centering}
+
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=BfRed, urlcolor=BfRed, citecolor=BfRed}
+
+% ── Barres TikZ réutilisables (mini bar-chart) ───────────────
+% \metricbar{label}{valeur 0..1}{couleur}
+\newcommand{\metricbar}[3]{%
+  \node[anchor=east, font=\small] at (0, 0) {#1};
+  \draw[fill=LightGray, draw=MidGray] (0.2,-0.22) rectangle (6.2,0.22);
+  \draw[fill=#3, draw=#3] (0.2,-0.22) rectangle ({0.2+6.0*#2},0.22);
+  \node[anchor=west, font=\small\bfseries] at (6.35,0) {#2};
+}
+
+\begin{document}
+
+% ── Page de titre ────────────────────────────────────────────
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+{\Huge\bfseries\color{BfRed} BFPME\par}
+\vspace{0.4cm}
+{\Large Plateforme d'aide à la décision pour le risque de crédit PME\par}
+\vspace{1.2cm}
+\rule{0.8\textwidth}{1.5pt}\par
+\vspace{0.8cm}
+{\LARGE\bfseries Rapport de synthèse — Phase~1\par}
+\vspace{0.3cm}
+{\large Modélisation sur données synthétiques\par}
+\vspace{0.6cm}
+{\large\itshape Travaux, méthodes, résultats et illustrations\par}
+\vspace{1cm}
+\rule{0.8\textwidth}{1.5pt}\par
+\vfill
+{\large Société d'accueil~: MPSoft\par}
+{\large Projet de fin d'études\par}
+\vspace{1cm}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{Contexte et objectifs}
+% ============================================================
+
+La BFPME (Banque de Financement des PME) évalue chaque demande de financement au moyen d'un
+système de scoring expert. Ce projet, mené chez MPSoft, vise à construire une plateforme
+d'aide à la décision qui \textbf{prédit la probabilité de défaut (PD)} d'une PME, \textbf{explique}
+chaque décision de façon auditable, et \textbf{simule} des scénarios de stress — tout en
+préservant la supervision humaine du comité de crédit.
+
+Cette première phase a été réalisée sur un \textbf{jeu de données synthétique}, faute d'accès
+immédiat aux dossiers réels. L'objectif était de valider de bout en bout la cohérence technique
+du pipeline (données $\rightarrow$ modèle $\rightarrow$ explication $\rightarrow$ agent) avant
+la migration vers des données réelles, traitée en phase~2.
+
+\begin{table}[H]
+\centering
+\caption{Périmètre livré en phase~1}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l Y@{}}
+\toprule
+\textbf{Brique} & \textbf{Livré} \\
+\midrule
+Données        & Générateur synthétique piloté par un facteur de risque latent ($\sim$90 variables) \\
+Modélisation   & Comparaison Random Forest / XGBoost sur 3 périmètres de variables (A/B/C) \\
+Explicabilité  & Contributions SHAP globales et locales (\texttt{TreeExplainer}) \\
+Agent IA       & Orchestrateur \texttt{/chat/analyze} + synthèse LLM local (Ollama) \\
+Tests de stress& Moteur Monte Carlo vectorisé (VaR, Expected Shortfall) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+\section{Méthodes}
+% ============================================================
+
+\subsection{Génération des données synthétiques}
+
+Le jeu de données est construit en cinq étapes reproductibles (graine fixe \texttt{SEED=42})~:
+\begin{enumerate}[leftmargin=1.8em]
+  \item \textbf{Socle de scoring BFPME} — reproduction de la formule officielle
+        (\texttt{ScoringService.cs}) pour dériver les scores et la classe de risque.
+  \item \textbf{Facteur de risque latent} — variable cachée synthétisant la « vraie » qualité
+        d'un dossier, combinant score normalisé, indice de risque et type de projet, plus un
+        bruit gaussien.
+  \item \textbf{Génération conditionnelle} — plus de 90~variables métier générées
+        conditionnellement au profil latent (liquidité, garanties, comportement de paiement).
+  \item \textbf{Stochasticité et écrêtage} — bruit additif, tirages de Bernoulli, tirages
+        multinomiaux, écrêtage à des domaines plausibles.
+  \item \textbf{Défaut synthétique} — cible tirée d'un score logistique latent :
+        $\text{pd\_target}=\sigma(z)$, puis $\text{default\_flag}\sim\mathrm{Bernoulli}(\text{pd\_target})$.
+\end{enumerate}
+
+\subsection{Chaîne de prétraitement et ingénierie de variables}
+
+Des ratios métier sont dérivés avant modélisation (\texttt{loan\_to\_revenue},
+\texttt{cash\_to\_debt}, \texttt{payment\_stress\_index}, \texttt{garantie\_to\_loan}, etc.),
+puis un \texttt{ColumnTransformer} applique un traitement par nature de variable
+(figure~\ref{fig:pipeline}). Le jeu passe de \textbf{52} variables d'entrée à \textbf{80}
+variables transformées.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=6mm and 8mm,
+   box/.style={draw=DarkGray, thick, rounded corners=2pt, fill=LightGray,
+               text width=2.5cm, minimum height=1cm, align=center, font=\scriptsize},
+   io/.style={draw=BfRed, very thick, rounded corners=5pt, fill=white,
+              text width=2.1cm, minimum height=1cm, align=center, font=\scriptsize\bfseries},
+   fl/.style={-{Stealth[length=2mm]}, thick, DarkGray}]
+  \node[io] (raw) {52 variables brutes};
+  \node[box, right=of raw] (fe) {Ingénierie de variables (ratios)};
+  \node[box, right=of fe] (win) {Winsorisation + imputation};
+  \node[box, right=of win] (enc) {Encodage + standardisation};
+  \node[io, right=of enc] (out) {80 variables};
+  \draw[fl] (raw)--(fe); \draw[fl] (fe)--(win); \draw[fl] (win)--(enc); \draw[fl] (enc)--(out);
+\end{tikzpicture}
+\caption{Chaîne de prétraitement sérialisée dans l'artefact \texttt{joblib}}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{Modélisation et protocole d'évaluation}
+
+Trois \textbf{périmètres de variables} sont comparés (tableau~\ref{tab:options}), chacun évalué
+avec deux familles ensemblistes~: \textbf{Random Forest} et \textbf{XGBoost}. Protocole commun~:
+partition stratifiée 80/20 (\texttt{random\_state=42}), 8\,000 dossiers d'entraînement,
+2\,000 de test, métriques AUC / précision / rappel / F1 / exactitude.
+
+\begin{table}[H]
+\centering
+\caption{Trois options de sélection de variables}
+\label{tab:options}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}c Y l@{}}
+\toprule
+\textbf{Option} & \textbf{Périmètre} & \textbf{Statut} \\
+\midrule
+A & Toutes les variables + scores BFPME complets & Benchmark \\
+B & Sans la famille de scores BFPME (\textit{data-driven}) & Benchmark \\
+C & Hybride minimal : \texttt{score\_bfpme\_global} conservé, 62 \texttt{SF\_*} retirés & \textbf{Déployé} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Explicabilité, agent et tests de stress}
+
+\begin{itemize}
+  \item \textbf{XAI} — un \texttt{TreeExplainer} calcule les contributions SHAP sur la matrice
+        transformée (importance globale et décomposition locale par dossier).
+  \item \textbf{Agent IA} — le point d'entrée \texttt{/chat/analyze} enchaîne sélectivement
+        validation, prédiction, explication et scénario, puis délègue à un LLM local
+        (\texttt{qwen2.5:7b} via Ollama) la \emph{seule} mise en récit, sous séparation stricte
+        des rôles (le LLM ne produit aucune valeur numérique).
+  \item \textbf{Monte Carlo} — un moteur vectorisé génère des milliers de scénarios choqués et
+        reconstitue la distribution de la PD (VaR 95\,\%, Expected Shortfall).
+\end{itemize}
+
+% ============================================================
+\section{Résultats}
+% ============================================================
+
+\subsection{Performances du modèle déployé}
+
+Le modèle retenu est le \textbf{XGBoost de l'option~C}. Le tableau~\ref{tab:res} compare les deux
+familles sur ce périmètre~; les performances sont proches, XGBoost offrant un léger avantage en
+rappel et Random Forest en AUC.
+
+\begin{table}[H]
+\centering
+\caption{Résultats sur l'échantillon de test (option~C, \texttt{final\_dataset})}
+\label{tab:res}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l C C C C C@{}}
+\toprule
+\textbf{Modèle} & \textbf{AUC} & \textbf{Exactitude} & \textbf{Précision} & \textbf{Rappel} & \textbf{F1} \\
+\midrule
+XGBoost \textbf{(déployé)} & 0{,}889 & 0{,}855 & 0{,}868 & \textbf{0{,}875} & 0{,}872 \\
+Random Forest              & \textbf{0{,}891} & 0{,}856 & 0{,}871 & 0{,}874 & 0{,}873 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+  \begin{scope}
+    \node[anchor=east, font=\small] at (0,0) {AUC};
+    \draw[fill=LightGray, draw=MidGray] (0.2,-0.2) rectangle (6.2,0.2);
+    \draw[fill=BfRed, draw=BfRed] (0.2,-0.2) rectangle ({0.2+6.0*0.889},0.2);
+    \node[anchor=west, font=\small\bfseries] at (6.35,0) {0{,}889};
+  \end{scope}
+  \begin{scope}[yshift=-0.7cm]
+    \node[anchor=east, font=\small] at (0,0) {Précision};
+    \draw[fill=LightGray, draw=MidGray] (0.2,-0.2) rectangle (6.2,0.2);
+    \draw[fill=BfRed, draw=BfRed] (0.2,-0.2) rectangle ({0.2+6.0*0.868},0.2);
+    \node[anchor=west, font=\small\bfseries] at (6.35,0) {0{,}868};
+  \end{scope}
+  \begin{scope}[yshift=-1.4cm]
+    \node[anchor=east, font=\small] at (0,0) {Rappel};
+    \draw[fill=LightGray, draw=MidGray] (0.2,-0.2) rectangle (6.2,0.2);
+    \draw[fill=BfRed, draw=BfRed] (0.2,-0.2) rectangle ({0.2+6.0*0.875},0.2);
+    \node[anchor=west, font=\small\bfseries] at (6.35,0) {0{,}875};
+  \end{scope}
+  \begin{scope}[yshift=-2.1cm]
+    \node[anchor=east, font=\small] at (0,0) {F1};
+    \draw[fill=LightGray, draw=MidGray] (0.2,-0.2) rectangle (6.2,0.2);
+    \draw[fill=BfRed, draw=BfRed] (0.2,-0.2) rectangle ({0.2+6.0*0.872},0.2);
+    \node[anchor=west, font=\small\bfseries] at (6.35,0) {0{,}872};
+  \end{scope}
+\end{tikzpicture}
+\caption{Métriques du XGBoost déployé (option~C)}
+\label{fig:barres}
+\end{figure}
+
+\subsection{Réalisme : de la v1 à la v2}
+
+La première version du générateur produisait des performances quasi parfaites (AUC $\approx$
+0{,}99), attendues sur des données trop cohérentes. Une seconde version a \emph{injecté du
+réalisme}~: davantage de bruit, réduction du poids des variables dominantes, cas contradictoires,
+et surtout un \textbf{découpage temporel} (train = dossiers anciens, test = dossiers récents)
+introduisant une dérive de distribution. Les performances retombent alors à des niveaux
+crédibles (tableau~\ref{tab:realisme}).
+
+\begin{table}[H]
+\centering
+\caption{Effet de l'injection de réalisme (option~A, découpage temporel v2)}
+\label{tab:realisme}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l C C C@{}}
+\toprule
+\textbf{Version} & \textbf{AUC (RF)} & \textbf{AUC (XGB)} & \textbf{Lecture} \\
+\midrule
+v1 (split aléatoire)  & $\approx$ 0{,}99 & $\approx$ 0{,}99 & Cohérence technique du pipeline \\
+v2 (split temporel)   & 0{,}820 & 0{,}802 & Robustesse sous hypothèses réalistes \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Message clé~:} des métriques plus basses ne signifient pas un projet dégradé —
+elles traduisent un cadre d'évaluation plus honnête et plus défendable avant la migration vers
+les données réelles.
+
+% ============================================================
+\section{Conclusion et transition vers la phase~2}
+% ============================================================
+
+La phase~1 valide une chaîne complète et cohérente~: génération de données réalistes,
+modélisation comparée (RF / XGBoost sur trois périmètres), explicabilité SHAP, agent IA
+orchestrateur avec LLM local, et tests de stress Monte Carlo. Le modèle déployé (XGBoost
+option~C) atteint une AUC de \textbf{0{,}89} sur le jeu final, et de \textbf{0{,}80–0{,}82} sous
+évaluation temporelle stricte.
+
+La suite logique — objet du \textbf{rapport de phase~2 (BFPME\_2)} — est la sortie du cadre
+synthétique~: confrontation à des \textbf{jeux de données externes} pour éprouver la
+généralisation, puis migration vers les \textbf{données réelles de la BFPME} pour un
+ré-entraînement et une validation en conditions opérationnelles.
+
+\end{document}

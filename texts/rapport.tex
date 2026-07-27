@@ -1,0 +1,2978 @@
+% ============================================================
+%  RAPPORT DE FIN D'ÉTUDES – ESPRIT
+%  AI-Driven Credit Risk Prediction and Explainable
+%  Decision Platform for Banking
+%  Société d'accueil : MPSoft
+% ============================================================
+
+
+\documentclass[a4paper,12pt,oneside]{report}
+
+% ── Encodage et langue ───────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+% ── Mise en page ─────────────────────────────────────────────
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% ── Typographie ──────────────────────────────────────────────
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ── Couleurs (UNIQUEMENT rouge ESPRIT + gris ; AUCUN BLEU) ───
+\usepackage[dvipsnames,svgnames,table]{xcolor}
+\definecolor{EspritRed}{RGB}{180, 0, 0}
+\definecolor{DarkGray}{RGB}{50, 50, 50}
+\definecolor{LightGray}{RGB}{235, 235, 235}
+
+% ── Graphiques ───────────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{float}                 % placement [H] strict des flottants
+\usepackage{tikz}
+\usepackage{pgffor}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit, backgrounds}
+
+% Dossiers où LaTeX cherche les images (Overleaf : téléverser les
+% logos à la racine du projet ou dans images/ — rien d'autre à faire)
+\graphicspath{{./}{images/}{figures/}}
+
+% ── Images absentes : emplacement réservé automatique ────────
+% Tant qu'un fichier image n'a pas été téléversé, un cadre vide
+% portant son nom est affiché à sa place : le document compile
+% sans erreur. Dès que le fichier est ajouté au projet, l'image
+% s'affiche normalement, sans aucune modification du code.
+%
+% Pour un espace totalement vierge (sans cadre ni nom de fichier),
+% remplacer \bfpmephframetrue par \bfpmephframefalse ci-dessous.
+\usepackage{keyval}
+\newif\ifbfpmephframe
+\bfpmephframetrue
+
+\makeatletter
+\newlength{\bfpme@w}
+\newlength{\bfpme@h}
+% Clés acceptées par l'emplacement réservé (les autres sont ignorées)
+\define@key{bfpmeph}{width}{\setlength{\bfpme@w}{#1}}
+\define@key{bfpmeph}{height}{\setlength{\bfpme@h}{#1}}
+\define@key{bfpmeph}{totalheight}{\setlength{\bfpme@h}{#1}}
+\define@key{bfpmeph}{scale}{}
+\define@key{bfpmeph}{angle}{}
+\define@key{bfpmeph}{page}{}
+\define@key{bfpmeph}{trim}{}
+\define@key{bfpmeph}{clip}[true]{}
+\define@key{bfpmeph}{draft}[true]{}
+\define@key{bfpmeph}{keepaspectratio}[true]{}
+\define@key{bfpmeph}{origin}{}
+\define@key{bfpmeph}{viewport}{}
+\define@key{bfpmeph}{bb}{}
+\define@key{bfpmeph}{interpolate}[true]{}
+\define@key{bfpmeph}{type}{}
+\define@key{bfpmeph}{ext}{}
+
+\newcommand{\bfpme@placeholder}[2]{%
+  \begingroup
+    \setlength{\bfpme@w}{0pt}\setlength{\bfpme@h}{0pt}%
+    \setkeys{bfpmeph}{#1}%
+    % dimensions par défaut si une seule (ou aucune) a été donnée
+    \ifdim\bfpme@w=0pt \ifdim\bfpme@h=0pt
+        \setlength{\bfpme@w}{0.6\linewidth}\setlength{\bfpme@h}{0.28\linewidth}%
+      \else
+        \setlength{\bfpme@w}{1.8\bfpme@h}%
+      \fi
+    \else
+      \ifdim\bfpme@h=0pt \setlength{\bfpme@h}{0.45\bfpme@w}\fi
+    \fi
+    \ifbfpmephframe
+      \fboxsep=0pt \fboxrule=0.4pt
+      \textcolor{gray!55}{%
+        \fbox{\parbox[c][\bfpme@h][c]{\bfpme@w}{\centering
+          \tiny\textcolor{gray!75}{\texttt{\detokenize{#2}}}}}}%
+    \else
+      \rule{0pt}{\bfpme@h}\hspace{\bfpme@w}%
+    \fi
+  \endgroup
+}
+
+% Recherche du fichier : racine, images/ et figures/, avec ou sans
+% extension (\IfFileExists n'explore pas \graphicspath tout seul).
+\newif\ifbfpme@found
+\newcommand{\bfpme@try}[1]{%
+  \ifbfpme@found\else\IfFileExists{#1}{\bfpme@foundtrue}{}\fi}
+\newcommand{\bfpme@lookup}[1]{%
+  \bfpme@foundfalse
+  \bfpme@try{#1}\bfpme@try{#1.pdf}\bfpme@try{#1.png}%
+  \bfpme@try{#1.jpg}\bfpme@try{#1.jpeg}\bfpme@try{#1.eps}%
+  \bfpme@try{images/#1}\bfpme@try{images/#1.pdf}\bfpme@try{images/#1.png}%
+  \bfpme@try{images/#1.jpg}\bfpme@try{images/#1.jpeg}\bfpme@try{images/#1.eps}%
+  \bfpme@try{figures/#1}\bfpme@try{figures/#1.pdf}\bfpme@try{figures/#1.png}%
+  \bfpme@try{figures/#1.jpg}\bfpme@try{figures/#1.jpeg}\bfpme@try{figures/#1.eps}%
+}
+
+% Interception de \includegraphics : image réelle si le fichier
+% existe, emplacement réservé sinon.
+\let\bfpme@origincludegraphics\includegraphics
+\renewcommand{\includegraphics}[2][]{%
+  \bfpme@lookup{#2}%
+  \ifbfpme@found
+    \bfpme@origincludegraphics[#1]{#2}%
+  \else
+    \bfpme@placeholder{#1}{#2}%
+  \fi
+}
+\makeatother
+
+% ── Style des chapitres ──────────────────────────────────────
+\usepackage{titlesec}
+
+% Chapitres NUMÉROTÉS : double règle + "CHAPITRE N" + titre MAJUSCULES
+\titleformat{\chapter}[display]
+  {\normalfont\centering}
+  {\rule{\linewidth}{2pt}\\[6pt]%
+   {\large\bfseries CHAPITRE \thechapter}\\%
+   \rule{\linewidth}{1pt}}
+  {12pt}
+  {\Huge\bfseries\MakeUppercase}
+  [\vspace{4pt}\rule{\linewidth}{0pt}]
+\titlespacing*{\chapter}{0pt}{-30pt}{40pt}
+
+% Chapitres NON NUMÉROTÉS (numberless) : règle + titre MAJUSCULES
+\titleformat{name=\chapter,numberless}[display]
+  {\normalfont\centering}
+  {}{0pt}
+  {\rule{\linewidth}{2pt}\\[8pt]\Huge\bfseries\MakeUppercase}
+  [\vspace{4pt}\rule{\linewidth}{0pt}]
+
+% Sections / sous-sections : noir gras (pas de couleur)
+\titleformat{\section}
+  {\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+\titlespacing*{\section}{0pt}{16pt}{8pt}
+\titlespacing*{\subsection}{0pt}{14pt}{6pt}
+\titlespacing*{\subsubsection}{0pt}{10pt}{4pt}
+
+% Commande pour chapitres non numérotés (intro, conclusion, résumé, abstract)
+\newcommand{\chapterunnumbered}[1]{%
+  \chapter*{#1}%
+  \addcontentsline{toc}{chapter}{#1}%
+  \markboth{\MakeUppercase{#1}}{\MakeUppercase{#1}}%
+}
+
+% ── Table des matières ───────────────────────────────────────
+\usepackage[titles]{tocloft}
+\setlength{\cftbeforechapskip}{8pt}
+\renewcommand{\cftchapfont}{\bfseries}
+\renewcommand{\cftchappagefont}{\bfseries}
+\renewcommand{\cftdotsep}{1}
+
+% ── En-têtes et pieds de page ────────────────────────────────
+% Aucun en-tête : ni titre de chapitre, ni filet. Seul le numéro
+% de page figure en pied, centré.
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+% Les pages d'ouverture de chapitre suivent la même règle
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyfoot[C]{\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+}
+
+% ── Lettrines ────────────────────────────────────────────────
+\usepackage{lettrine}
+\renewcommand{\LettrineFontHook}{\bfseries}
+
+% ── Hyperliens (TOUT EN NOIR : aucun bleu) ───────────────────
+\usepackage[
+  colorlinks=true,
+  linkcolor=black, citecolor=black, urlcolor=black,
+  anchorcolor=black, filecolor=black, menucolor=black, runcolor=black,
+  pdftitle={AI-Driven Credit Risk Prediction and Explainable Decision Platform for Banking},
+  pdfauthor={[Votre Nom]}
+]{hyperref}
+
+% ── Tableaux et listes ───────────────────────────────────────
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{enumitem}
+\setlist[itemize,1]{label=\textbullet, leftmargin=2em}
+\setlist[itemize,2]{label=---,         leftmargin=3em}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+% ── Code ─────────────────────────────────────────────────────
+\usepackage{listings}
+\definecolor{CodeBg}{RGB}{248, 248, 248}
+\definecolor{CodeRule}{RGB}{180, 0, 0}
+\definecolor{CodeNum}{RGB}{150, 150, 150}
+\definecolor{CodeComment}{RGB}{110, 110, 110}
+
+% Style unifié : filet rouge ESPRIT à gauche, fond très clair, sans cadre lourd
+\lstdefinestyle{bfpme}{
+  basicstyle      = \ttfamily\footnotesize,
+  backgroundcolor = \color{CodeBg},
+  frame           = leftline,
+  framerule       = 2pt,
+  rulecolor       = \color{CodeRule},
+  framexleftmargin  = 8pt,
+  framexrightmargin = 4pt,
+  framextopmargin   = 5pt,
+  framexbottommargin= 5pt,
+  xleftmargin     = 12pt,
+  xrightmargin    = 2pt,
+  numbers         = left,
+  numberstyle     = \tiny\color{CodeNum},
+  numbersep       = 9pt,
+  keywordstyle    = \bfseries\color{DarkGray},
+  commentstyle    = \itshape\color{CodeComment},
+  stringstyle     = \color{DarkGray},
+  breaklines      = true,
+  breakatwhitespace = true,
+  breakindent     = 1em,
+  columns         = fullflexible,
+  keepspaces      = true,
+  showstringspaces= false,
+  tabsize         = 2,
+  aboveskip       = 12pt,
+  belowskip       = 10pt,
+  captionpos      = b,
+  abovecaptionskip= 6pt
+}
+\lstset{style=bfpme}
+
+% Environnement : un listing insécable, centré, jamais coupé entre deux pages
+\newenvironment{codeblock}
+  {\par\medskip\noindent\begin{minipage}{\linewidth}}
+  {\end{minipage}\par\medskip}
+
+% ── Mathématiques ────────────────────────────────────────────
+\usepackage{amsmath, amssymb}
+
+% ── Figures et légendes ──────────────────────────────────────
+\usepackage{caption}
+\usepackage{subcaption}
+\captionsetup{labelsep=endash, font=small, labelfont=bf, justification=centering}
+
+% ── Styles TikZ réutilisables ────────────────────────────────
+\tikzset{
+  layerbox/.style   = {draw=DarkGray, thick, rounded corners=3pt, fill=LightGray,
+                       text width=11cm, minimum height=1.05cm, align=center, font=\small},
+  flowbox/.style    = {draw=DarkGray, thick, rounded corners=2pt, fill=LightGray,
+                       minimum height=0.9cm, minimum width=2.4cm, align=center, font=\footnotesize},
+  stagebox/.style   = {draw=DarkGray, very thick, rounded corners=3pt, fill=LightGray,
+                       text width=2.9cm, minimum height=1.6cm, align=center, font=\footnotesize},
+  arrow/.style      = {-{Stealth[length=2.5mm]}, thick, DarkGray},
+  % Styles du schéma de flux (fig. « Flux de données »).
+  % NB : préfixe « flux » obligatoire — des noms courts comme « step »
+  % entreraient en collision avec les clés réservées de TikZ.
+  fluxbox/.style    = {draw=DarkGray, thick, rounded corners=2pt, fill=LightGray,
+                       text width=2.3cm, minimum height=1.15cm, align=center,
+                       font=\scriptsize},
+  fluxio/.style     = {draw=DarkGray, very thick, rounded corners=6pt, fill=white,
+                       text width=2.0cm, minimum height=1.15cm, align=center,
+                       font=\scriptsize\bfseries},
+  fluxlab/.style    = {font=\tiny\itshape, text=DarkGray, inner sep=1.5pt},
+  fluxarrow/.style  = {-{Stealth[length=2.2mm]}, thick, DarkGray}
+}
+
+% ── Bibliographie ────────────────────────────────────────────
+% Bibliographie native (thebibliography) : les citations \cite{...}
+% s'affichent en [1], [2]... après deux passes de pdfLaTeX, SANS biber.
+% Titre de la section :
+\renewcommand{\bibname}{Webographie \& Bibliographie}
+
+% ════════════════════════════════════════════════════════════
+\begin{document}
+
+% ════════════════════════════════════════════════════════════
+%  PAGES PRÉLIMINAIRES  (numérotation romaine ; la numérotation
+%  arabe démarre à l'Introduction générale)
+% ════════════════════════════════════════════════════════════
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+\chapter*{Dédicace}
+\thispagestyle{plain}
+% [Texte de dédicace à compléter]
+
+\chapter*{Remerciements}
+\thispagestyle{plain}
+% [Texte de remerciements à compléter]
+
+{
+  \renewcommand{\contentsname}{Table des matières}
+  \tableofcontents
+}
+
+\chapter*{Liste des abréviations}
+\thispagestyle{plain}
+\begin{tabular}{ll}
+  \textbf{IA}    & Intelligence Artificielle \\
+  \textbf{ML}    & Machine Learning (apprentissage automatique) \\
+  \textbf{LLM}   & Large Language Model (grand modèle de langage) \\
+  \textbf{XAI}   & Explainable Artificial Intelligence \\
+  \textbf{SHAP}  & SHapley Additive exPlanations \\
+  \textbf{PD}    & Probabilité de Défaut (\textit{Probability of Default}) \\
+  \textbf{AUC}   & Aire sous la courbe ROC (\textit{Area Under the Curve}) \\
+  \textbf{ROC}   & Receiver Operating Characteristic \\
+  \textbf{VaR}   & Value-at-Risk \\
+  \textbf{EDA}   & Analyse exploratoire des données (\textit{Exploratory Data Analysis}) \\
+  \textbf{PSI}   & Population Stability Index \\
+  \textbf{NLP}   & Traitement du Langage Naturel \\
+  \textbf{API}   & Interface de Programmation Applicative \\
+  \textbf{REST}  & Representational State Transfer \\
+  \textbf{SCRUM} & Cadre de gestion de projet Agile \\
+  \textbf{UML}   & Langage de Modélisation Unifié \\
+  \textbf{PME}   & Petite et Moyenne Entreprise \\
+\end{tabular}
+
+% ════════════════════════════════════════════════════════════
+%  INTRODUCTION GÉNÉRALE  --  la numérotation arabe commence ici
+% ════════════════════════════════════════════════════════════
+\clearpage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\chapterunnumbered{Introduction générale}
+
+\lettrine[lines=3, lhang=0.1, loversize=0.05]{D}{}ans un secteur bancaire en pleine
+mutation, où la digitalisation transforme profondément les pratiques du crédit, l'évaluation
+du risque de défaut demeure un enjeu stratégique majeur. Les établissements financiers
+font face à une double exigence : prendre des décisions rapides et fiables, et garantir la
+transparence et l'explicabilité de chaque décision vis-à-vis des régulateurs, des auditeurs
+et des clients.
+
+Les approches traditionnelles de scoring de crédit, fondées sur des modèles statistiques
+linéaires et des règles expertes, atteignent aujourd'hui leurs limites. Elles peinent à
+capturer la complexité des comportements de remboursement, à s'adapter à des profils
+d'emprunteurs hétérogènes, et à fournir des justifications compréhensibles pour chaque
+décision individuelle. Par ailleurs, la «~boîte noire~» inhérente aux modèles d'apprentissage
+automatique avancés constitue un frein réglementaire et éthique majeur à leur adoption
+dans un contexte bancaire.
+
+L'intelligence artificielle explicable (\textit{Explainable AI}, XAI) ouvre une voie nouvelle
+en conciliant la puissance prédictive des algorithmes modernes et l'exigence d'auditabilité.
+En parallèle, l'émergence des agents IA et des grands modèles de langage (LLM) offre des
+perspectives inédites pour orchestrer des processus décisionnels complexes, interagir en
+langage naturel avec les analystes, et produire des explications contextualisées et accessibles.
+
+C'est dans ce cadre que s'inscrit notre projet de fin d'études, réalisé au sein de
+Manager Partner Software (MPSoft), leader tunisien en solutions bancaires. Notre mission
+consiste à concevoir et développer une plateforme d'aide à la décision pour le risque de
+crédit, pilotée par un agent IA, combinant la modélisation par apprentissage automatique de
+la probabilité de défaut (PD), l'explicabilité globale et locale par SHAP, le raisonnement en
+langage naturel via un LLM et la simulation de scénarios de stress par méthode de Monte Carlo.
+L'ensemble de la plateforme intègre une logique de supervision humaine
+(\textit{human-in-the-loop}) garantissant que l'IA assiste~--- sans jamais remplacer~--- le
+jugement des analystes crédit et des comités de décision des établissements bancaires.
+
+Ce rapport est organisé en sept chapitres suivant une progression logique, de la
+compréhension métier jusqu'à la validation du système livré.
+
+Le Chapitre~1 établit le cadre général du projet : il présente la société
+d'accueil MPSoft, analyse le processus existant d'évaluation du risque
+de crédit PME, formule la problématique, décrit la solution proposée, justifie le choix
+méthodologique SCRUM et spécifie les besoins fonctionnels et non fonctionnels.
+
+Le Chapitre~2 dresse un état de l'art couvrant le risque de crédit bancaire et
+ses spécificités PME, les approches traditionnelles et modernes de scoring, les techniques
+d'apprentissage automatique, les techniques d'explicabilité (XAI) telles que SHAP, les
+architectures d'agents IA, l'usage des grands modèles de langage en finance et les méthodes
+de simulation Monte Carlo.
+
+Le Chapitre~3 détaille la conception et l'architecture technique de la plateforme :
+architecture multi-couches, conception des données, architecture de l'agent IA, diagrammes
+UML, environnement de développement et planification des sprints et des releases.
+
+Le Chapitre~4 (Release~I) couvre la compréhension métier du crédit PME et
+l'ingénierie des données : cycle de vie du crédit, collecte et exploration des données
+bancaires, nettoyage, \textit{feature engineering} et évaluation de la qualité et des biais.
+
+Le Chapitre~5 (Release~II) présente la modélisation prédictive (régression
+logistique, arbre de décision, Random Forest, Gradient Boosting) ainsi que l'explicabilité
+(SHAP global et local, auditabilité des décisions).
+
+Le Chapitre~6 (Release~III) décrit l'agent IA et son orchestration décisionnelle,
+ainsi que l'intégration d'un LLM pour la génération d'explications en langage naturel et
+l'interaction avec les analystes.
+
+Le Chapitre~7 (Release~IV) aborde les tests de stress du portefeuille par
+simulation Monte Carlo : construction de scénarios adverses, estimation de la distribution
+des pertes et des indicateurs de risque extrême du portefeuille PME.
+
+La conclusion générale synthétise les apports du projet et ouvre sur les
+perspectives d'évolution de la plateforme.
+
+% ════════════════════════════════════════════════════════════
+%  CHAPITRE 1 – CONTEXTE GÉNÉRAL ET SPÉCIFICATION DES BESOINS
+% ════════════════════════════════════════════════════════════
+\chapter{Contexte général et spécification des besoins}
+
+\section*{Introduction}
+
+Dans un contexte d'accélération numérique où la transformation digitale est passée du
+statut de concept à celui de nécessité opérationnelle, les institutions financières font
+face à un défi de taille~: évaluer le risque de crédit de manière précise, rapide et
+explicable. Ce constat est particulièrement critique pour les banques spécialisées dans le
+financement des PME, dont les portefeuilles présentent des caractéristiques de risque
+spécifiques.
+
+Ce chapitre présente le cadre général de notre projet de fin d'études, réalisé au sein de
+MPSoft, leader tunisien en solutions bancaires. Notre travail
+s'articule autour du développement d'une plateforme d'aide à la décision pour le risque de
+crédit, combinant la modélisation par apprentissage automatique de la probabilité de défaut
+(PD), l'intelligence artificielle explicable, un agent orchestrateur et le raisonnement LLM.
+
+\section{Cadre général du projet}
+
+Le travail présenté dans ce rapport a été effectué au sein de la société Manager Partner
+Software (MPSoft) dans le cadre d'un projet de fin d'études en vue de l'obtention du
+diplôme national d'ingénieur en Informatique. Ce projet vise à moderniser les outils
+d'évaluation du risque de crédit des établissements bancaires et à résoudre des
+problématiques concrètes d'aide à la décision dans le contexte du financement des PME.
+
+\subsection{Objectifs du projet}
+
+L'objectif principal de ce projet est de concevoir et développer un agent IA
+d'aide à la décision pour le risque de crédit des PME, alliant haute performance prédictive
+et pleine explicabilité des décisions. Cet agent doit~:
+
+\begin{itemize}
+  \item prédire la probabilité de défaut (PD) de toute PME emprunteuse à partir de ses
+        caractéristiques financières, sectorielles et comportementales~;
+  \item expliquer chaque décision de crédit à travers des valeurs SHAP globales et locales,
+        compréhensibles tant par les analystes de la banque que par les régulateurs~;
+  \item permettre aux analystes crédit d'interroger le système en langage naturel sur les
+        facteurs de risque et les résultats~;
+  \item tester la robustesse du portefeuille PME sous des scénarios de stress économique
+        par simulation Monte Carlo.
+\end{itemize}
+
+\section{Organisme d'accueil}
+
+\subsection{Présentation de MPSoft}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=5cm]{logo_mpsoft}
+  \caption{Logo de Manager Partner Software}
+  \label{fig:logo_mpsoft}
+\end{figure}
+
+MPSoft constitue l'environnement professionnel dans lequel s'inscrit ce projet de fin
+d'études. Fondée en 2001, cette entreprise tunisienne s'est positionnée comme un
+leader tunisien en solutions bancaires, développant une expertise reconnue avec
+plus de 40~modules métiers (MpBank, MpPost) et une plateforme No-Code révolutionnaire.
+
+\subsection{Mission et Valeurs}
+
+MPSoft révolutionne le développement des systèmes d'information bancaires en offrant des
+solutions modulaires, performantes, sécurisées et conformes aux exigences réglementaires.
+Pour concrétiser cette ambition, l'entreprise s'investit dans~:
+
+\begin{itemize}
+  \item systèmes bancaires modulaires et personnalisés : solutions adaptées
+        pour banques de détail, banques postales, microfinance ou finance islamique~;
+  \item déploiement rapide avec ROI optimisé : technologies No-Code et
+        architectures modulaires réduisant les délais jusqu'à 5x~;
+  \item performance, conformité et adaptabilité locale : solutions compatibles
+        Open API et ajustées aux réglementations locales~;
+  \item partenariat sur le long terme : accompagnement des institutions tout au
+        long de leur digitalisation~;
+  \item accessibilité accrue : plateforme No-Code permettant aux profils non
+        techniques de concevoir des applications métiers.
+\end{itemize}
+
+\subsection{Organigramme de Manager Partner Software}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{organigramme_mpsoft}
+  \caption{Organigramme de Manager Partner Software}
+  \label{fig:orga_mpsoft}
+\end{figure}
+
+\subsection{Cadre du stage}
+
+Le stage s'est déroulé au sein de l'équipe Data \& Innovation de MPSoft. L'objectif consiste
+à doter les établissements bancaires d'un outil d'évaluation et d'aide à la décision crédit
+de nouvelle génération, capable de répondre aux spécificités du risque PME.
+
+\section{Étude de l'existant et problématique}
+
+\subsection{Le financement des PME par les banques}
+
+Les banques de financement des petites et moyennes entreprises jouent un rôle clé dans
+le soutien au développement du tissu entrepreneurial. Leur mission consiste à financer la
+création, l'extension et la modernisation des PME, en accordant des crédits à moyen et long
+terme à des projets dont les profils de risque sont souvent éloignés des standards de la banque de
+détail classique. Les portefeuilles de crédit PME se caractérisent par~:
+
+\begin{itemize}
+  \item des volumes unitaires de crédit élevés comparés au retail, mais des
+        échantillons globaux relativement limités~;
+  \item une forte hétérogénéité sectorielle (industrie, services, agriculture,
+        TIC, tourisme)~;
+  \item une prédominance du risque idiosyncrasique lié au projet, au promoteur
+        et à la qualité de gestion de la PME~;
+  \item une forte sensibilité aux cycles macro-économiques et aux chocs
+        sectoriels~;
+  \item un horizon de remboursement long (5 à 12 ans), accroissant l'incertitude.
+\end{itemize}
+
+\subsection{Analyse de l'existant}
+
+L'analyse approfondie des processus actuels d'évaluation du risque de crédit au sein des banques
+révèle une situation contrastée~:
+
+\begin{itemize}
+  \item Points forts existants :
+  \begin{itemize}
+    \item expertise métier solide des analystes crédit sur les segments PME~;
+    \item comité de crédit structuré avec une gouvernance claire~;
+    \item connaissance fine des spécificités sectorielles du tissu PME~;
+    \item historique de données client conséquent.
+  \end{itemize}
+  \item Limitations identifiées :
+  \begin{itemize}
+    \item scoring largement manuel, reposant sur des grilles expertes statiques~;
+    \item faible pouvoir prédictif sur les profils complexes ou les secteurs émergents~;
+    \item absence d'explicabilité formalisée pour justifier un refus individuel~;
+    \item aucun mécanisme automatisé de test de stress~;
+    \item délais d'instruction longs liés à la nature manuelle du processus.
+  \end{itemize}
+\end{itemize}
+
+\subsection{Problématique}
+
+\subsubsection{Limites des systèmes d'évaluation actuels}
+
+Les outils de scoring actuellement utilisés par les banques reposent sur des grilles expertes
+linéaires dont la capacité de discrimination plafonne sur les profils PME les plus
+complexes. La diversité des secteurs financés et l'hétérogénéité des structures financières
+des PME exigent des modèles capables de capturer des interactions non linéaires
+entre variables financières, sectorielles et comportementales.
+
+\subsubsection{Enjeux réglementaires et explicabilité}
+
+La réglementation impose une traçabilité complète des décisions de crédit. Tout refus doit
+pouvoir être justifié de manière individuelle, compréhensible et auditable. Cette exigence
+d'explicabilité, aujourd'hui absente de nombreux outils en production dans les banques, est au
+c\oe ur de notre démarche.
+
+\subsubsection{Conséquences opérationnelles}
+
+Ces lacunes se traduisent concrètement par des délais d'instruction allongés, un taux
+d'erreur non négligeable sur les décisions de crédit, et une exposition mal maîtrisée du
+portefeuille PME aux risques de stress macro-économique et sectoriel.
+
+\section{Solution proposée}
+
+\subsection{Modélisation par apprentissage automatique}
+
+Le c\oe ur prédictif de la plateforme repose sur des modèles d'apprentissage automatique
+(\textit{machine learning}) entraînés à estimer la probabilité de défaut d'une PME à partir de
+ses caractéristiques financières, sectorielles et comportementales. La démarche de modélisation
+suit un protocole rigoureux~: constitution et nettoyage d'un jeu de données, ingénierie de
+variables discriminantes (ratios de solvabilité, indices de pression de paiement), puis
+entraînement et comparaison de plusieurs familles d'algorithmes. Des modèles de référence
+interprétables (régression logistique, arbre de décision) fixent une base de comparaison,
+tandis que des modèles ensemblistes plus puissants (Random Forest, Gradient Boosting via
+XGBoost) capturent les interactions non linéaires propres au risque PME. La sélection du modèle
+final résulte d'un arbitrage entre pouvoir discriminant (AUC-ROC), stabilité et
+interprétabilité, évalué par validation croisée. Le préprocesseur et le modèle retenu sont
+sérialisés dans un artefact unique, garantissant la reproductibilité entre l'entraînement et
+l'inférence en production.
+
+\subsection{Module d'explicabilité (XAI)}
+
+Le module XAI produit, pour chaque demande de crédit PME, des explications globales
+(importance des variables à l'échelle du portefeuille) et locales (contribution SHAP par
+variable pour la PME analysée), dans un format auditable par les analystes de la banque et les
+régulateurs.
+
+\subsection{Agent IA pour la décision de crédit}
+
+Nous proposons un agent IA orchestrateur qui pilote l'ensemble du pipeline
+décisionnel bancaire~: collecte et traitement des données PME, exécution du modèle
+prédictif, application des seuils de confiance, escalade humaine vers le comité de crédit
+si nécessaire, et journalisation de chaque décision.
+
+\subsection{Interaction en langage naturel (LLM)}
+
+Un grand modèle de langage (LLM) est intégré comme couche de raisonnement et de
+communication~: il génère des explications narratives à partir des sorties du modèle, et
+permet aux analystes crédit d'interroger le système en langage naturel sur les
+facteurs de risque et les scénarios.
+
+\subsection{Tests de stress par simulation Monte Carlo}
+
+La plateforme intègre un moteur de simulation Monte Carlo pour tester la robustesse du
+portefeuille PME sous des scénarios adverses : à partir d'un dossier de base et d'un ensemble
+de chocs appliqués aux variables clés, le moteur génère un grand nombre de scénarios perturbés
+et reconstitue la distribution des probabilités de défaut, dont sont dérivés des indicateurs de
+risque extrême (VaR, Expected Shortfall).
+
+\subsection{Valeur ajoutée}
+
+Cette solution transforme un processus expert de plusieurs jours en une analyse automatisée,
+explicable et robuste, réalisée en quelques minutes~; elle autonomise les équipes
+d'analystes sans pour autant automatiser les décisions finales du comité de crédit.
+
+\section{Choix méthodologique}
+
+\subsection{Étude comparative des méthodes Agile}
+
+Plusieurs cadres agiles ont été comparés (Scrum, Kanban, XP) selon des critères de
+structuration, d'itérativité et d'adaptation aux retours métier, afin d'identifier la
+méthode la plus adaptée à un projet data science incrémental.
+
+\subsection{Justification du choix de SCRUM}
+
+La méthode SCRUM a été retenue pour sa capacité à structurer le développement en sprints
+itératifs, permettant une validation progressive des livrables par les parties prenantes
+de MPSoft et les analystes crédit des banques, et une adaptation continue aux retours terrain.
+
+\subsection{Équipe SCRUM}
+
+L'équipe projet se répartit selon les rôles SCRUM classiques : un Product Owner garant de
+la valeur métier, un Scrum Master facilitateur, et une équipe de développement chargée de
+la réalisation technique.
+
+\subsection{Formalisme de modélisation}
+
+Nous utilisons le langage UML pour modéliser les cas d'utilisation, les séquences
+d'interaction, le modèle de classes et l'architecture de déploiement de la plateforme.
+
+\subsection{Événements SCRUM implémentés}
+
+Les cérémonies SCRUM mises en œuvre comprennent la planification de sprint, la mêlée
+quotidienne, la revue de sprint et la rétrospective, garantissant un rythme de livraison
+régulier et une amélioration continue.
+
+\section{Spécification des besoins}
+
+\subsection{Besoins fonctionnels}
+
+\subsubsection{Prédiction du risque de crédit PME}
+
+Le système doit estimer la probabilité de défaut de chaque PME à partir de ses
+caractéristiques financières, sectorielles et comportementales.
+
+\subsubsection{Explicabilité et traçabilité des décisions (XAI)}
+
+Chaque prédiction doit être accompagnée d'explications globales et locales auditables, et
+journalisée pour assurer la traçabilité.
+
+\subsubsection{Interaction en langage naturel avec les analystes}
+
+Les analystes doivent pouvoir interroger le système en langage naturel et obtenir des
+réponses contextualisées sur les facteurs de risque.
+
+\subsubsection{Tests de stress et simulation Monte Carlo}
+
+Le système doit permettre de simuler des scénarios adverses et d'évaluer la robustesse du
+portefeuille.
+
+\subsection{Besoins non fonctionnels}
+
+\subsubsection{Performance et scalabilité}
+
+La plateforme doit traiter les dossiers dans des délais courts et supporter la montée en
+charge du portefeuille.
+
+\subsubsection{Sécurité, confidentialité et protection des données}
+
+Les données sensibles des PME doivent être protégées conformément aux bonnes pratiques de
+sécurité.
+
+\subsubsection{Auditabilité et gouvernance}
+
+L'ensemble des décisions et traitements doit être traçable et gouverné, de manière à
+satisfaire les exigences d'audit interne et externe.
+
+\subsubsection{Maintenabilité et évolutivité}
+
+L'architecture modulaire doit faciliter la maintenance et l'ajout de nouvelles
+fonctionnalités.
+
+\section*{Conclusion}
+
+Ce premier chapitre a posé les fondations du travail~: la présentation de MPSoft (société
+d'accueil), l'analyse critique du processus existant, la définition
+de la problématique et la description de la solution proposée. Le chapitre suivant dresse
+un état de l'art approfondi formant le socle scientifique et technique de la plateforme.
+
+% ════════════════════════════════════════════════════════════
+%  CHAPITRE 2 – ÉTAT DE L'ART
+% ════════════════════════════════════════════════════════════
+\chapter{État de l'art}
+
+\section*{Introduction}
+
+Ce chapitre dresse un panorama des concepts, techniques et cadres méthodologiques mobilisés
+dans notre projet : le risque de crédit et ses spécificités PME, les approches traditionnelles
+de scoring, l'apprentissage automatique appliqué au crédit, l'explicabilité (XAI), les agents
+IA, les LLM en finance et la simulation Monte Carlo. Pour chaque thème, nous positionnons les
+choix retenus par rapport à l'état de la recherche et aux pratiques de l'industrie.
+
+\section{Le risque de crédit bancaire}
+
+Le risque de crédit constitue la principale source de risque pour une banque de financement.
+Cette section en présente les concepts fondamentaux.
+
+\subsection{Définition et cycle de vie du crédit}
+
+Le risque de crédit désigne la perte potentielle résultant de l'incapacité d'un emprunteur
+à honorer ses engagements~\cite{thomas2002}. Le cycle de vie d'un crédit se décompose en quatre
+phases : la demande et l'instruction, l'analyse et l'approbation, le décaissement et le suivi,
+puis, le cas échéant, le défaut et le recouvrement. Chacune génère des données exploitables
+pour l'évaluation du risque, depuis les états financiers collectés à l'instruction jusqu'aux
+signaux comportementaux observés durant le suivi.
+
+\subsection{Catégories de risque : éligibilité et probabilité de défaut}
+
+On distingue le risque d'éligibilité, qui détermine si un dossier remplit les conditions
+minimales d'octroi, de la probabilité de défaut (PD), qui quantifie la probabilité qu'un
+emprunteur fasse défaut sur un horizon donné. La PD, généralement estimée sur un horizon de
+douze mois, constitue le paramètre central de notre plateforme et la cible de la modélisation
+prédictive.
+
+\subsection{Spécificités du risque PME}
+
+Le risque associé aux PME se distingue par sa nature fortement idiosyncrasique : il dépend
+du projet, de la qualité du promoteur et de la structure financière de l'entreprise. À la
+différence du crédit aux particuliers, les volumes d'observations sont plus limités et la
+sensibilité aux chocs sectoriels et macro-économiques est plus marquée. Ces caractéristiques
+compliquent l'estimation statistique du risque : la rareté relative des événements de défaut
+et l'hétérogénéité des profils appellent des modèles capables de tirer parti d'un signal
+dispersé sur de nombreuses variables, tout en restant robustes au sur-apprentissage.
+
+\subsection{Rôle des parties prenantes : analystes, gestionnaires, comités}
+
+L'évaluation du crédit mobilise plusieurs acteurs : les analystes instruisent les dossiers,
+les gestionnaires de risque surveillent l'exposition globale, et les comités de crédit
+prennent la décision finale. Notre plateforme vise à assister ces acteurs sans se
+substituer à leur jugement, dans une logique de supervision humaine.
+
+\section{Approches traditionnelles de scoring de crédit}
+
+Les approches traditionnelles reposent sur des modèles statistiques linéaires et des grilles
+expertes, dont l'histoire remonte aux travaux fondateurs sur la prédiction de la faillite
+d'entreprise~\cite{altman1968}.
+
+\subsection{Modèles statistiques classiques}
+
+Les modèles classiques s'appuient principalement sur la régression logistique et l'analyse
+discriminante, qui estiment une probabilité de défaut à partir d'une combinaison linéaire de
+variables~\cite{hosmer2013}. La régression logistique, en particulier, demeure la référence
+réglementaire du \textit{credit scoring} : elle fournit des coefficients directement
+interprétables sous forme de rapports de cotes (\textit{odds ratios}), ce qui facilite la
+justification des décisions auprès des régulateurs. Son interprétabilité élevée en a fait le
+standard pendant plusieurs décennies.
+
+\subsection{Scorecards expertes}
+
+Les scorecards expertes traduisent l'expérience métier en grilles de notation pondérées,
+attribuant des points selon les caractéristiques du dossier. Largement utilisées en
+financement PME, elles offrent transparence et simplicité mais peinent à capturer les
+interactions complexes entre variables. Le moteur de scoring interne BFPME, dont s'inspire la
+génération de notre jeu de données, relève précisément de cette catégorie.
+
+\subsection{Limites des approches existantes}
+
+Ces approches souffrent de leur hypothèse de linéarité, de leur faible capacité à modéliser
+les interactions, et d'un manque d'adaptation aux profils atypiques. Elles ne fournissent
+aucune explication locale formalisée par décision, ce qui limite leur auditabilité au niveau
+individuel. Les études comparatives de grande ampleur montrent que, sur données de crédit, les
+méthodes d'apprentissage automatique modernes surpassent significativement ces approches
+linéaires en pouvoir de discrimination~\cite{lessmann2015}.
+
+\section{Apprentissage automatique appliqué au risque de crédit}
+
+Les modèles modernes de machine learning offrent une capacité prédictive supérieure en
+capturant les interactions non linéaires entre variables, au prix d'une interprétabilité
+directe plus faible qu'il convient de compenser par des méthodes d'explicabilité dédiées.
+
+\subsection{Arbres de décision et modèles ensemblistes}
+
+L'arbre de décision partitionne récursivement l'espace des variables en régions homogènes
+au regard de la cible ; simple et lisible, il souffre néanmoins d'une forte variance. Les
+méthodes ensemblistes remédient à cette limite en combinant de multiples arbres. Le Random
+Forest~\cite{breiman2001} agrège des arbres entraînés sur des sous-échantillons aléatoires
+(\textit{bagging}) et réduit ainsi la variance, tandis que le Gradient
+Boosting~\cite{friedman2001} construit les arbres séquentiellement, chaque arbre corrigeant les
+erreurs résiduelles du précédent. Ces modèles capturent efficacement les relations non
+linéaires propres au risque PME.
+
+\subsection{Le Gradient Boosting et XGBoost}
+
+Parmi les implémentations de Gradient Boosting, XGBoost~\cite{chen2016} s'est imposé comme une
+référence en compétition et en production grâce à une optimisation régularisée, une gestion
+native des valeurs manquantes et une parallélisation efficace. Sa robustesse et sa performance
+sur des données tabulaires hétérogènes en font un candidat naturel pour le scoring de crédit,
+et il constitue le modèle déployé au c\oe ur de notre plateforme~\cite{xgboostdoc}.
+
+\subsection{Étude comparative des approches ML}
+
+Le choix d'un modèle résulte d'un arbitrage entre pouvoir prédictif, stabilité et
+interprétabilité. Une étude comparative confronte ces critères — mesurés par l'AUC-ROC, la
+statistique de Kolmogorov--Smirnov, la précision, le rappel et la stabilité temporelle — afin
+de justifier la sélection du modèle retenu pour la banque. L'écosystème \texttt{scikit-learn}
+\cite{pedregosa2011} fournit un cadre unifié pour l'entraînement, la validation croisée et
+l'évaluation de ces modèles.
+
+\section{Explainable AI (XAI)}
+
+L'explicabilité est une exigence réglementaire et éthique majeure dans le contexte bancaire,
+particulièrement lorsque des modèles non linéaires sont mobilisés pour des décisions
+individuelles~\cite{molnar2022}.
+
+\subsection{Nécessité de l'explicabilité dans la finance réglementée}
+
+Toute décision de crédit doit être justifiable et auditable. L'explicabilité répond à une
+double exigence : réglementaire, pour satisfaire les régulateurs et auditeurs, et éthique,
+pour garantir l'absence de discrimination et la confiance des clients. On distingue les
+modèles intrinsèquement interprétables (régression logistique, arbres peu profonds) des
+méthodes d'explicabilité \textit{post-hoc}, appliquées après coup à un modèle complexe.
+
+\subsection{Méthodes post-hoc : LIME et SHAP}
+
+Parmi les méthodes post-hoc, LIME~\cite{ribeiro2016} approxime localement le modèle par un
+modèle linéaire interprétable au voisinage de l'instance à expliquer. SHAP
+(\textit{SHapley Additive exPlanations})~\cite{lundberg2017}, fondée sur la théorie des jeux
+coopératifs, attribue à chaque variable une contribution à la prédiction correspondant à sa
+valeur de Shapley. Contrairement à LIME, SHAP offre des garanties théoriques d'additivité, de
+cohérence et de précision locale, ce qui en fait l'outil central de notre couche
+d'explicabilité~\cite{shapdoc}.
+
+\subsection{Explicabilité globale versus locale}
+
+L'explicabilité globale décrit le comportement d'ensemble du modèle sur le portefeuille
+(importance moyenne des variables, \textit{summary plots}), tandis que l'explicabilité locale
+justifie une décision individuelle (\textit{force} et \textit{waterfall plots} par dossier). La
+complémentarité de ces deux niveaux, offerte nativement par les valeurs SHAP, répond aux
+besoins respectifs des gestionnaires de risque et des analystes.
+
+\section{Agents IA et systèmes d'orchestration}
+
+L'architecture d'agent IA permet d'orchestrer des composants prédictifs et explicatifs au
+sein d'un pipeline décisionnel cohérent et traçable.
+
+\subsection{Architecture et principes des agents IA}
+
+Un agent IA orchestre une séquence de composants — perception, raisonnement, décision et
+action — au sein d'un pipeline cohérent. Dans notre cas, l'agent coordonne l'exécution du
+modèle, la génération des explications et l'application des règles de décision, en sélectionnant
+dynamiquement les traitements à invoquer selon la requête de l'analyste.
+
+\subsection{Seuils de confiance et mécanismes d'escalade humaine}
+
+L'agent applique des seuils de confiance qui déterminent si une décision peut être proposée
+automatiquement ou doit être escaladée vers un décideur humain. Ce mécanisme
+\textit{human-in-the-loop} garantit que les cas incertains ou à fort enjeu sont soumis au
+comité de crédit, l'IA restant un outil d'assistance et non de substitution.
+
+\subsection{Traçabilité, logging et gouvernance}
+
+Chaque décision et chaque résultat intermédiaire sont journalisés afin d'assurer une
+traçabilité complète, socle de la gouvernance et de l'auditabilité du système.
+
+\section{Grands modèles de langage (LLM) pour la finance}
+
+Les LLM apportent une couche d'interaction et de raisonnement en langage naturel adaptée
+aux besoins des analystes crédit.
+
+\subsection{Fondements et capacités de raisonnement des LLM}
+
+Les grands modèles de langage reposent sur l'architecture Transformer et le mécanisme
+d'attention~\cite{vaswani2017}, et acquièrent, par pré-entraînement à grande échelle, une
+capacité de raisonnement contextuel et de génération de texte cohérent à partir d'instructions
+en langage naturel (\textit{few-shot learning})~\cite{brown2020}. Ils permettent de transformer
+des sorties techniques (scores, contributions SHAP) en explications accessibles.
+
+\subsection{NLP et LLM appliqués à l'analyse du risque}
+
+Le traitement du langage naturel ouvre des cas d'usage variés en finance : synthèse de
+dossiers, extraction d'information et interaction conversationnelle. Des modèles spécialisés,
+tels que BloombergGPT~\cite{wu2023bloomberggpt}, illustrent l'intérêt d'adapter les LLM au
+domaine financier. Dans notre plateforme, le LLM sert principalement à expliquer les sorties du
+modèle et à répondre aux questions des analystes, en s'appuyant sur une inférence locale via
+Ollama~\cite{ollama} afin de préserver la souveraineté des données.
+
+\subsection{Intégration LLM dans des pipelines décisionnels}
+
+L'intégration d'un LLM exige une séparation stricte des rôles : le modèle prédictif estime
+le risque, tandis que le LLM se limite à expliquer et à reformuler. Ce principe garantit que
+le LLM n'introduit aucune prédiction de risque non contrôlée et qu'aucune valeur numérique
+n'est inventée ou altérée par la couche de langage.
+
+\section{Tests de stress et simulation Monte Carlo}
+
+L'estimation de la probabilité de défaut décrite précédemment repose sur des conditions
+économiques « centrales », c'est-à-dire les plus probables. Or la gestion prudentielle du
+risque exige également d'évaluer le comportement du portefeuille lorsque l'environnement se
+dégrade fortement. C'est précisément l'objet des tests de stress, qui complètent la mesure du
+risque attendu par une mesure du risque extrême.
+
+\subsection{Principes et finalité des tests de résistance bancaire}
+
+Les tests de résistance (\textit{stress tests}) consistent à soumettre un portefeuille à des
+conditions économiques défavorables mais plausibles, afin de mesurer sa capacité à absorber
+des pertes sans compromettre la solvabilité de l'établissement~\cite{bcbs2018}. Apparus comme un
+instrument central de la supervision bancaire à la suite de la crise financière de 2008, ils ont
+été institutionnalisés par les accords de Bâle~II et Bâle~III et sont aujourd'hui régulièrement
+conduits par les autorités de régulation pour vérifier l'adéquation des fonds propres.
+
+Sur le plan méthodologique, on distingue habituellement deux grandes familles d'approches.
+L'analyse de sensibilité fait varier un seul facteur de risque à la fois (par
+exemple une hausse du taux de défaut) pour isoler son impact marginal. L'analyse par
+scénarios, plus réaliste, fait évoluer simultanément un ensemble cohérent de variables
+macro-économiques — croissance du PIB, taux de chômage, taux d'intérêt, inflation — selon une
+narration économique donnée. Ces scénarios peuvent être historiques, en rejouant un
+épisode de crise passé, ou hypothétiques, en construisant une situation adverse
+prospective. La construction de scénarios sévères mais crédibles constitue ainsi le c\oe ur
+de la démarche.
+
+Dans le contexte spécifique du risque de crédit PME, les tests de stress présentent un intérêt
+particulier : la forte sensibilité de ce segment aux cycles macro-économiques et aux chocs
+sectoriels rend l'évaluation en conditions adverses indispensable à une appréciation réaliste
+des pertes potentielles.
+
+\subsection{Simulation stochastique Monte Carlo}
+
+Les approches par scénarios discrets, bien qu'utiles, ne couvrent qu'un nombre limité de
+trajectoires économiques et ne permettent pas de quantifier la probabilité d'occurrence des
+pertes. La simulation de Monte Carlo lève cette limite en adoptant une approche probabiliste :
+plutôt que de tester quelques scénarios déterminés, elle explore un très grand nombre de
+trajectoires aléatoires afin de reconstituer la distribution complète des pertes possibles du
+portefeuille~\cite{glasserman2004}.
+
+\subsubsection{Principe de la méthode}
+
+Issue des travaux menés à Los Alamos dans les années 1940 et nommée en référence aux jeux de
+hasard~\cite{metropolis1949}, la méthode de Monte Carlo repose sur la loi des grands nombres :
+en répétant un très grand nombre de tirages aléatoires d'un phénomène stochastique, la moyenne
+empirique des résultats converge vers l'espérance théorique recherchée. Appliquée au risque de
+crédit, elle consiste à modéliser les variables d'entrée incertaines (facteurs
+macro-économiques, paramètres de risque) par des lois de probabilité, puis à générer un grand
+nombre de réalisations aléatoires de ces variables. Pour chaque réalisation, on recalcule les
+pertes du portefeuille, ce qui produit au final une distribution empirique des pertes plutôt
+qu'une valeur ponctuelle.
+
+\subsubsection{Étapes de mise en \oe uvre}
+
+Le déroulement type d'une simulation Monte Carlo appliquée au risque de crédit comprend la
+spécification des distributions de probabilité des variables d'entrée et de leurs corrélations,
+le tirage aléatoire d'un jeu de valeurs à chaque itération, le calcul de la perte du
+portefeuille pour ce jeu de valeurs, la répétition de l'opération sur un grand nombre
+d'itérations, puis l'agrégation des résultats en une distribution des pertes. La fiabilité des
+estimations dépend du nombre de simulations : la précision s'améliore à mesure que les tirages
+se multiplient, jusqu'à atteindre la convergence des indicateurs étudiés.
+
+\subsubsection{Indicateurs de risque dérivés}
+
+L'exploitation de la distribution simulée des pertes permet d'estimer plusieurs mesures de
+risque clés. La perte attendue correspond à la moyenne de la distribution, tandis que
+l'analyse du comportement en queue (\textit{tail risk}) renseigne sur les pertes
+extrêmes peu probables mais critiques. La Value-at-Risk (VaR) mesure la perte maximale
+susceptible d'être subie pour un niveau de confiance donné (par exemple 99~\%), et
+l'Expected Shortfall (ou VaR conditionnelle) en complète l'analyse en quantifiant la
+perte moyenne au-delà de ce seuil. Ces indicateurs offrent une vision quantifiée et
+probabilisée du risque extrême du portefeuille, particulièrement adaptée à l'évaluation de
+portefeuilles PME hétérogènes et sensibles aux chocs.
+
+\subsubsection{Apports et limites}
+
+La principale force de la simulation Monte Carlo réside dans sa flexibilité : elle s'accommode
+de distributions non normales, de relations non linéaires et de structures de corrélation
+complexes entre facteurs de risque, là où les approches analytiques classiques atteignent
+leurs limites. Ses limites tiennent essentiellement à son coût de calcul, qui croît avec le
+nombre d'itérations, et à sa forte dépendance à la qualité des hypothèses de distribution et de
+corrélation retenues — selon le principe bien connu du \textit{garbage in, garbage out}, des
+hypothèses mal calibrées produisent des résultats trompeurs.
+
+\section*{Conclusion}
+
+Cet état de l'art a posé le socle scientifique du projet, du risque de crédit PME aux méthodes
+d'apprentissage automatique, d'explicabilité et de simulation stochastique. Le chapitre
+suivant présente l'architecture technique et la conception de la plateforme.
+
+% ════════════════════════════════════════════════════════════
+%  CHAPITRE 3 – CONCEPTION ET ARCHITECTURE DE LA SOLUTION
+% ════════════════════════════════════════════════════════════
+\chapter{Conception et architecture de la solution}
+
+\section*{Introduction}
+
+Après avoir posé, dans les chapitres précédents, le cadre métier du financement
+des PME et le socle scientifique du projet, ce troisième chapitre est consacré à
+la conception et à l'architecture technique de la plateforme effectivement
+réalisée. Il fait le pont entre les besoins exprimés et l'implémentation : il décrit
+l'architecture logique multi-couches, la structure concrète du projet (organisation
+du code), les choix technologiques retenus, la conception des données, l'architecture
+de l'API et des services métier, l'orchestration de l'agent IA, le module
+d'explicabilité, le moteur de simulation Monte~Carlo, la modélisation UML, ainsi
+que la planification des sprints et des releases.
+
+L'objectif de ce chapitre est double : justifier les décisions d'architecture au
+regard des exigences fonctionnelles et non fonctionnelles (performance, modularité,
+auditabilité, explicabilité), et fournir une vue suffisamment précise du système
+pour en garantir la reproductibilité et la maintenabilité.
+
+% ────────────────────────────────────────────────────────────
+\section{Vision architecturale globale}
+
+\subsection{Présentation générale de la plateforme}
+
+La plateforme est conçue selon une architecture modulaire en couches, qui
+sépare strictement les responsabilités : ingestion et validation des données,
+prédiction de la probabilité de défaut (PD), explicabilité (SHAP), simulation de
+scénarios et de stress (Monte~Carlo), orchestration décisionnelle et interaction en
+langage naturel. Cette séparation des préoccupations
+(\textit{separation of concerns}) répond directement aux exigences non
+fonctionnelles de maintenabilité et d'évolutivité formulées au chapitre~1 : chaque
+composant peut être testé, remplacé ou réentraîné indépendamment des autres.
+
+Le système est structuré autour de trois grands ensembles :
+
+\begin{itemize}
+  \item un backend applicatif exposant une API REST (FastAPI)~\cite{fastapi}, qui
+        orchestre la chaîne validation $\rightarrow$ prédiction $\rightarrow$
+        explication $\rightarrow$ scénario $\rightarrow$ synthèse en langage naturel ;
+  \item un noyau analytique (artefact de modèle sérialisé, moteur SHAP,
+        moteur Monte~Carlo, ingénierie de variables) découplé de la couche HTTP ;
+  \item une interface analyste (tableau de bord web statique) consommant
+        l'API et restituant prédictions, explications et simulations sous forme
+        graphique.
+\end{itemize}
+
+\subsection{Architecture logique multi-couches}
+
+L'architecture s'organise en cinq couches complémentaires, chacune assurant
+une fonction précise du pipeline décisionnel. La figure~\ref{fig:archi_couches}
+en présente la vue d'ensemble.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[node distance=6mm]
+    \node[layerbox] (l5) {\textbf{Couche interaction LLM \& interface analyste}\\
+      Tableau de bord web · dialogue en langage naturel · synthèse narrative};
+    \node[layerbox, below=of l5] (l4) {\textbf{Couche agent IA \& orchestration}\\
+      Enchaînement des traitements · seuils de confiance · escalade humaine};
+    \node[layerbox, below=of l4] (l3) {\textbf{Couche explicabilité \& traçabilité}\\
+      SHAP (\texttt{TreeExplainer}) · contributions locales/globales · logging};
+    \node[layerbox, below=of l3] (l2) {\textbf{Couche modélisation \& prédiction}\\
+      Feature engineering · préprocesseur · \texttt{predict\_proba} · classe de risque};
+    \node[layerbox, below=of l2] (l1) {\textbf{Couche collecte \& ingestion des données}\\
+      Acquisition du dossier PME · validation des variables · formatage};
+    % flèches bidirectionnelles entre couches
+    \foreach \a/\b in {l5/l4, l4/l3, l3/l2, l2/l1}{
+      \draw[arrow, {Stealth[length=2mm]}-{Stealth[length=2mm]}] (\a) -- (\b);
+    }
+    % annotations de flux (centrées : n'altèrent pas l'axe de la figure)
+    \node[above=3mm of l5, font=\scriptsize\itshape, text=DarkGray] {Analyste crédit};
+    \node[below=3mm of l1, font=\scriptsize\itshape, text=DarkGray] {Données du dossier PME};
+  \end{tikzpicture}
+  \caption{Architecture logique multi-couches de la plateforme}
+  \label{fig:archi_couches}
+\end{figure}
+
+\subsubsection{Couche collecte et ingestion des données}
+
+Cette couche centralise l'acquisition, la validation et le formatage des
+données du dossier de crédit PME en provenance des systèmes de la banque. Le service
+de validation (\texttt{validation\_service}) vérifie la présence des variables
+attendues par le modèle, signale les champs manquants (qui seront imputés) et les
+champs non utilisés, sans jamais bloquer la chaîne : la robustesse prime, les
+manques étant gérés en aval par imputation.
+
+\subsubsection{Couche modélisation et prédiction}
+
+Elle héberge l'artefact entraîné (préprocesseur + modèle) chargé et mis en cache au
+démarrage, et expose l'estimation de la PD pour chaque dossier soumis. C'est le
+c\oe ur prédictif : application de l'ingénierie de variables, transformation par le
+préprocesseur, puis \texttt{predict\_proba} et classement du risque
+(\textit{low / medium / high}).
+
+\subsubsection{Couche explicabilité et traçabilité}
+
+Elle calcule les contributions SHAP (\texttt{TreeExplainer}) sur la matrice
+de variables transformées et restitue, pour chaque prédiction, les facteurs qui
+augmentent ou diminuent le risque. Chaque explication est structurée (valeur de base,
+contributions ordonnées, direction) pour être auditable.
+
+\subsubsection{Couche agent IA et orchestration}
+
+Elle coordonne l'enchaînement des traitements (validation, prédiction, explication,
+scénario), applique les seuils de confiance et gère la composition des résultats en
+une réponse unique. C'est le niveau qui matérialise la logique d'\textit{agent} :
+décider quels outils invoquer en fonction de la requête de l'analyste.
+
+\subsubsection{Couche interaction LLM et interface analyste}
+
+Elle expose une interface conversationnelle permettant aux analystes d'interroger le
+système en langage naturel. Un grand modèle de langage (LLM) reçoit uniquement
+les sorties calculées par les couches précédentes et produit une synthèse narrative,
+sans jamais recalculer ni inventer de valeur numérique.
+
+\subsection{Flux de données et interactions entre composants}
+
+Les composants communiquent via des interfaces standardisées (modèles Pydantic
+typés). Le flux nominal, depuis la soumission d'un dossier jusqu'à la restitution
+d'une explication narrative, garantit la cohérence et la traçabilité de bout en bout.
+La figure~\ref{fig:flux_donnees} en donne la représentation.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[node distance=9mm and 8mm]
+    % Rangée 1 (gauche vers droite) : ingestion et préparation
+    \node[fluxio]                    (in)   {Dossier\\PME};
+    \node[fluxbox, right=of in]      (val)  {Validation\\\texttt{\tiny Pydantic}};
+    \node[fluxbox, right=of val]     (fe)   {Ingénierie\\de variables};
+    \node[fluxbox, right=of fe]      (prep) {Préprocesseur\\\texttt{\tiny joblib}};
+
+    % Rangée 2 (droite vers gauche) : prédiction et explication
+    \node[fluxbox, below=of prep]    (pred) {Modèle XGBoost\\\texttt{\tiny predict\_proba}};
+    \node[fluxbox, left=of pred]     (shap) {Explication SHAP\\\texttt{\tiny TreeExplainer}};
+    \node[fluxbox, left=of shap]     (scen) {Scénarios\\\textit{\tiny what-if} / Monte Carlo};
+
+    % Rangée 3 (gauche vers droite) : décision et restitution
+    \node[fluxbox, below=of scen]    (agent){Agent IA\\seuils \& escalade};
+    \node[fluxbox, right=of agent]   (llm)  {Synthèse LLM\\\texttt{\tiny Ollama}};
+    \node[fluxio,  right=of llm]     (out)  {Décision\\explicable};
+
+    % Enchaînement en serpentin
+    \draw[fluxarrow] (in)   -- (val);
+    \draw[fluxarrow] (val)  -- (fe);
+    \draw[fluxarrow] (fe)   -- (prep);
+    \draw[fluxarrow] (prep) -- node[fluxlab, right]{PD} (pred);
+    \draw[fluxarrow] (pred) -- (shap);
+    \draw[fluxarrow] (shap) -- (scen);
+    \draw[fluxarrow] (scen) -- node[fluxlab, left]{$\Delta$PD} (agent);
+    \draw[fluxarrow] (agent)-- (llm);
+    \draw[fluxarrow] (llm)  -- (out);
+
+    % Traçabilité : chaque étape est journalisée
+    \node[fluxlab, below=5mm of out, align=center] (jrn)
+      {journalisation\\\& audit};
+    \draw[fluxarrow, dashed] (out) -- (jrn);
+  \end{tikzpicture}
+  \caption{Flux de données de bout en bout du pipeline décisionnel}
+  \label{fig:flux_donnees}
+\end{figure}
+
+% ────────────────────────────────────────────────────────────
+\section{Structure du projet}
+
+L'organisation du dépôt traduit directement l'architecture en couches : le backend
+applicatif est isolé de l'interface, des notebooks de modélisation, des jeux de
+données et des scripts d'entraînement. Le listing~\ref{lst:arbo} présente
+l'arborescence simplifiée du projet, réduite à ses cinq répertoires essentiels.
+
+\begin{codeblock}
+\begin{lstlisting}[caption={Arborescence simplifiée du projet}, label={lst:arbo},
+                   basicstyle=\ttfamily\scriptsize, columns=fixed, numbers=none]
+BFPME/
++-- backend/                   # Application FastAPI (API REST + services)
+|   +-- app/
+|   |   +-- main.py            # App FastAPI, montage des routers + frontend
+|   |   +-- config.py          # Configuration Pydantic (variables .env)
+|   |   +-- schemas.py         # Modeles de requete/reponse (Pydantic)
+|   |   +-- routers/           # Un fichier par groupe d'endpoints
+|   |   |   +-- prediction.py  explain.py  scenario.py
+|   |   |   +-- monte_carlo.py chat.py     metadata.py
+|   |   +-- services/          # Logique metier decouplee du HTTP
+|   |       +-- artifacts.py            # Chargement/cache de l'artefact joblib
+|   |       +-- model_service.py        # Feature engineering + predict_proba
+|   |       +-- shap_service.py         # TreeExplainer SHAP
+|   |       +-- scenario_service.py     # PD baseline vs. modifiee (delta_pd)
+|   |       +-- monte_carlo_service.py  # Stress test stochastique vectorise
+|   |       +-- llm_service.py          # Appel async httpx vers Ollama
+|   |       +-- feature_engineering.py  # Ratios derives a l'inference
+|   +-- requirements.txt
++-- frontend/                  # Tableau de bord statique (HTML / CSS / JS)
+|   +-- index.html  app.js  styles.css
++-- notebook/                  # Notebooks de modelisation (Options A / B / C)
++-- data/                      # Datasets + artefacts modeles (.joblib, .json)
++-- scripts/                   # Entrainement et generation de donnees
+    +-- train_option_c_xgboost.py
+\end{lstlisting}
+\end{codeblock}
+
+Ce découpage applique le principe de séparation entre la couche HTTP et la
+logique métier : les fichiers de \texttt{routers/} ne contiennent que la déclaration
+des points d'entrée et la validation des entrées/sorties, tandis que toute la logique
+analytique réside dans \texttt{services/}. Un service peut ainsi être réutilisé par
+plusieurs endpoints (par exemple \texttt{model\_service.predict} est appelé à la fois
+par \texttt{/predict}, \texttt{/scenario} et \texttt{/chat/analyze}).
+
+% ────────────────────────────────────────────────────────────
+\section{Choix technologiques et environnement de développement}
+
+Le tableau~\ref{tab:techno} récapitule la pile technologique retenue et la
+justification de chaque choix au regard des besoins du projet.
+
+\begin{table}[H]
+\centering
+\caption{Pile technologique de la plateforme}
+\label{tab:techno}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l l Y@{}}
+\toprule
+\textbf{Domaine} & \textbf{Technologie} & \textbf{Justification} \\
+\midrule
+Langage         & Python 3            & Écosystème data science / ML mature \\
+API REST        & FastAPI + Uvicorn   & Asynchrone, typage natif, OpenAPI/Swagger auto \\
+Validation      & Pydantic v2         & Schémas typés, configuration par variables d'env. \\
+ML --- arbres   & XGBoost, scikit-learn (RandomForest) & Modèles ensemblistes performants \\
+Prétraitement   & scikit-learn        & \texttt{ColumnTransformer}, encodeurs, scalers \\
+Explicabilité   & SHAP (\texttt{TreeExplainer}) & Explications cohérentes globales et locales \\
+Sérialisation   & joblib              & Persistance préprocesseur + modèle \\
+LLM             & Ollama (API compatible OpenAI) & Inférence locale, souveraineté des données \\
+Client HTTP     & httpx (async)       & Appels non bloquants vers le LLM \\
+Frontend        & HTML/CSS/JS, Chart.js & Tableau de bord sans étape de build \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Configuration par variables d'environnement}
+
+Toute la configuration (chemins des artefacts, seuil de décision, activation et
+paramétrage du LLM, hôte/port) est centralisée dans \texttt{config.py} via
+\texttt{BaseSettings} de Pydantic~\cite{pydantic}, alimentée par un fichier \texttt{.env}. Ce
+mécanisme découple le code de l'infrastructure : il permet de basculer de modèle
+(RandomForest $\leftrightarrow$ XGBoost), d'activer ou non le LLM, ou de durcir le
+seuil de décision sans modifier le code.
+
+\begin{codeblock}
+\begin{lstlisting}[caption={Extrait de configuration (.env)}, label={lst:env}]
+MODEL_ARTIFACT_PATH=d:/BFPME/data/option_c_xgboost_model.joblib
+MODEL_METRICS_PATH=d:/BFPME/data/option_c_xgboost_metrics.json
+DEFAULT_THRESHOLD=0.5            # PD >= seuil => defaut predit
+LLM_ENABLED=true
+LLM_BASE_URL=http://127.0.0.1:11434/v1   # Ollama
+LLM_MODEL=qwen2.5:7b-instruct
+LLM_MAX_TOKENS=500
+\end{lstlisting}
+\end{codeblock}
+
+% ────────────────────────────────────────────────────────────
+\section{Conception des données}
+
+\subsection{Sources et nature des données bancaires}
+
+Les données proviennent des dossiers de crédit PME : informations signalétiques de
+l'entreprise (ancienneté, secteur, région, structure juridique, classification PME,
+effectif), états financiers (chiffre d'affaires, total actif/passif, capitaux
+propres, dettes court et long terme, fonds de roulement, BFR, trésorerie), variables
+de crédit (montant du prêt, durée, type de crédit, objectif, type de taux, valeur des
+garanties), variables comportementales (retards de paiement, impayés) et variables
+de scoring interne BFPME. La variable cible est \texttt{default\_flag} (défaut /
+non-défaut).
+
+Conformément au cadre du projet, le jeu de données exploité
+(\texttt{final\_dataset.csv}) est synthétique mais métier-cohérent : il est
+généré à partir d'un \textit{driver} latent de risque dérivé du score BFPME, de la
+classe de risque et du type de projet (création / extension), de sorte que les
+variables financières, comportementales et de garantie restent corrélées de façon
+réaliste. Il sert de support de prototypage, de comparaison de modèles et
+d'ingénierie de variables.
+
+\subsection{Modèle de données et entités principales}
+
+Le modèle de données structure les entités centrales du domaine du crédit PME et
+leurs relations. La figure~\ref{fig:classes_donnees} (diagramme de classes, non
+modifié) en formalise la structure ; les entités principales sont :
+
+\begin{itemize}
+  \item Entreprise / PME : caractéristiques signalétiques et financières du
+        demandeur ;
+  \item Dossier de crédit : montant, durée, type, objectif, garanties ;
+  \item Décision : PD estimée, classe de risque, seuil appliqué, explication
+        associée ;
+  \item Scénario de stress : chocs appliqués, distribution de PD simulée et
+        indicateurs de risque dérivés.
+\end{itemize}
+
+\subsection{Pipeline de prétraitement (artefact joblib)}
+
+Le préprocesseur et le modèle sont entraînés conjointement puis sérialisés dans un
+unique artefact joblib contenant : le \texttt{preprocessor}
+(\texttt{ColumnTransformer} ajusté), le \texttt{model} entraîné et la liste
+\texttt{allowed\_columns} des colonnes attendues. Le préprocesseur applique, selon le
+type de variable, la chaîne suivante :
+
+\begin{enumerate}
+  \item variables numériques sensibles aux valeurs extrêmes : imputation par
+        la médiane $\rightarrow$ winsorisation (écrêtage aux centiles 1 et 99)
+        $\rightarrow$ standardisation ;
+  \item variables numériques simples : imputation médiane $\rightarrow$
+        standardisation ;
+  \item variables ordinales (ex. durée de crédit) : imputation par mode
+        $\rightarrow$ \texttt{OrdinalEncoder} avec ordre métier explicite ;
+  \item variables nominales (secteur, région, structure juridique, type de
+        crédit, scénario économique) : imputation par mode $\rightarrow$
+        \texttt{OneHotEncoder} (\texttt{handle\_unknown=ignore}).
+\end{enumerate}
+
+Ce découpage par type de variable, encapsulé dans un \texttt{ColumnTransformer},
+porte la dimensionnalité de 52~variables brutes à 80~variables transformées.
+La figure~\ref{fig:pipeline_prepro} en illustre le déroulé.
+
+\begin{figure}[H]
+  \centering
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[node distance=5mm and 9mm]
+    % entrée
+    \node[flowbox, fill=EspritRed!12] (raw) {Variables\\brutes\\(52 var.)};
+    % quatre branches par type de variable
+    \node[flowbox, right=of raw, yshift=2.55cm] (num1) {Num. extrêmes};
+    \node[flowbox, right=of raw, yshift=0.85cm] (num2) {Num. simples};
+    \node[flowbox, right=of raw, yshift=-0.85cm] (ord)  {Ordinales};
+    \node[flowbox, right=of raw, yshift=-2.55cm] (nom)  {Nominales};
+    % traitements
+    \node[flowbox, right=of num1] (t1) {Impute méd. $\rightarrow$\\Winsor. $\rightarrow$\\Standard.};
+    \node[flowbox, right=of num2] (t2) {Impute méd. $\rightarrow$\\Standard.};
+    \node[flowbox, right=of ord]  (t3) {Impute mode $\rightarrow$\\OrdinalEnc.};
+    \node[flowbox, right=of nom]  (t4) {Impute mode $\rightarrow$\\OneHotEnc.};
+    % concaténation
+    \node[flowbox, right=16mm of t2, yshift=-0.85cm, fill=EspritRed!12,
+          minimum height=3.4cm] (concat) {Concaténation\\(\texttt{Column-}\\\texttt{Transformer})};
+    \node[flowbox, right=of concat] (out) {Matrice\\transformée\\(80 var.)};
+    % flèches
+    \foreach \b in {num1,num2,ord,nom}{\draw[arrow] (raw) -- (\b);}
+    \draw[arrow] (num1) -- (t1); \draw[arrow] (num2) -- (t2);
+    \draw[arrow] (ord)  -- (t3); \draw[arrow] (nom)  -- (t4);
+    \foreach \t in {t1,t2,t3,t4}{\draw[arrow] (\t) -- (concat);}
+    \draw[arrow] (concat) -- (out);
+  \end{tikzpicture}}
+  \caption{Pipeline de prétraitement sérialisé dans l'artefact joblib}
+  \label{fig:pipeline_prepro}
+\end{figure}
+
+\subsection{Ingénierie de variables à l'inférence}
+
+Un choix de conception déterminant consiste à appliquer l'ingénierie de
+variables avant le préprocesseur, à l'inférence, et non à la figer dans l'artefact.
+Le service \texttt{feature\_engineering} dérive à la volée des ratios métier
+discriminants à partir des champs bruts du dossier. Les principaux ratios sont
+définis comme suit :
+
+\begin{align}
+  \text{loan\_to\_revenue}
+    &= \frac{\text{montant\_pret}}{\text{chiffre\_affaires\_annuel}}, \\[4pt]
+  \text{cash\_to\_debt}
+    &= \frac{\text{tresorerie\_disponible}}{\text{dette\_totale}}, \\[4pt]
+  \text{garantie\_to\_loan}
+    &= \frac{\text{valeur\_garanties}}{\text{montant\_pret}}, \\[4pt]
+  \text{payment\_stress\_index}
+    &= \mathrm{clip}\!\left(\tfrac{\text{retards\_jours}}{90},\,0,\,3\right)
+     + \mathrm{clip}\!\left(\text{impayes\_to\_loan},\,0,\,3\right).
+\end{align}
+
+D'autres ratios sont calculés selon la même logique (\texttt{debt\_total},
+\texttt{impayes\_to\_loan}, \texttt{fdr\_bfr\_pressure},
+\texttt{financement\_externe\_intensity}). Cette approche garantit que la
+même logique de dérivation est appliquée à l'entraînement, à la prédiction
+unitaire, au scénario et à la simulation Monte~Carlo, évitant toute dérive entre
+apprentissage et production.
+
+% ────────────────────────────────────────────────────────────
+\section{Conception de l'API et des services}
+
+\subsection{Points d'entrée REST}
+
+L'API expose un ensemble cohérent de points d'entrée, chacun associé à un routeur
+dédié. Le tableau~\ref{tab:endpoints} en présente la cartographie.
+
+\begin{table}[H]
+\centering
+\caption{Cartographie des points d'entrée de l'API}
+\label{tab:endpoints}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l l Y@{}}
+\toprule
+\textbf{Méthode} & \textbf{Endpoint} & \textbf{Rôle} \\
+\midrule
+GET  & \texttt{/health}              & Sonde de disponibilité du service \\
+GET  & \texttt{/metadata/model}      & Métadonnées et métriques du modèle \\
+GET  & \texttt{/metadata/eda}        & Résumé exploratoire du dataset (graphes) \\
+POST & \texttt{/metadata/reload-model} & Rechargement de l'artefact sans redémarrage \\
+POST & \texttt{/validate}            & Contrôle de cohérence du dossier \\
+POST & \texttt{/predict}             & Prédiction de la PD et de la classe de risque \\
+POST & \texttt{/explain}             & Contributions SHAP (top-$k$) \\
+POST & \texttt{/scenario}            & Simulation what-if (PD baseline vs. modifiée) \\
+POST & \texttt{/monte-carlo}         & Test de stress stochastique \\
+POST & \texttt{/chat/analyze}        & Orchestration complète + synthèse LLM \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Cycle de vie de l'artefact}
+
+L'artefact est chargé une seule fois au démarrage de l'application
+(événement \texttt{startup}) et mis en cache en mémoire (\texttt{lru\_cache}). Le
+point d'entrée \texttt{/metadata/reload-model} permet de vider ce cache et de
+recharger le modèle à chaud, sans interruption de service, après un réentraînement.
+Cette conception répond à l'exigence de performance (pas de rechargement disque à
+chaque requête) tout en préservant la maintenabilité opérationnelle.
+
+% ────────────────────────────────────────────────────────────
+\section{Architecture de l'agent IA et orchestration}
+
+\subsection{Pipeline d'orchestration}
+
+Le c\oe ur de l'agent réside dans l'endpoint \texttt{/chat/analyze}, qui orchestre
+les outils analytiques en fonction des indicateurs portés par la requête
+(\texttt{run\_validation}, \texttt{run\_prediction}, \texttt{run\_explanation},
+\texttt{scenario\_changes}). Il compose les résultats dans une structure unique
+\texttt{tool\_results}, puis délègue la rédaction de la synthèse au LLM. La
+figure~\ref{fig:seq_chat} (diagramme de séquence, non modifié) en détaille les
+échanges.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{sequence_chat_analyze}
+  \caption{Diagramme de séquence de l'orchestration \texttt{/chat/analyze}}
+  \label{fig:seq_chat}
+\end{figure}
+
+\begin{codeblock}
+\begin{lstlisting}[caption={Logique d'orchestration (extrait)}, label={lst:orch},
+                   language=Python]
+if run_validation:  tool_results["validation"]  = validate_features(features)
+if run_prediction:  tool_results["prediction"]  = predict(features, threshold)
+if run_explanation: tool_results["explanation"] = explain_prediction(features, k)
+if scenario_changes: tool_results["scenario"]   = run_scenario(features, changes)
+# synthese narrative deleguee au LLM (si active), sinon sorties brutes
+\end{lstlisting}
+\end{codeblock}
+
+\subsection{Seuils de confiance et classes de risque}
+
+L'agent applique un seuil de décision configurable (\texttt{DEFAULT\_THRESHOLD},
+0{,}5 par défaut) : la classe prédite vaut « défaut » dès que la PD dépasse ce seuil.
+Indépendamment, une classe de risque qualitative est attribuée à des fins d'escalade :
+\textit{low} (PD~$<$~0{,}4), \textit{medium} ($0{,}4 \le$~PD~$<$~0{,}7) et
+\textit{high} (PD~$\ge$~0{,}7). Ce double mécanisme — seuil quantitatif et classe
+qualitative — matérialise la logique \textit{human-in-the-loop} : les dossiers à
+risque élevé sont signalés pour escalade vers le comité de crédit, l'IA assistant la
+décision sans s'y substituer.
+
+\subsection{Séparation stricte des rôles modèle / LLM}
+
+Un principe de conception fondamental gouverne l'intégration du LLM : la
+séparation stricte des responsabilités. Le modèle prédictif estime le risque ;
+le LLM se limite à expliquer et reformuler en langage naturel à partir des
+sorties calculées. Le \textit{prompt} système impose explicitement de n'utiliser que
+les sorties fournies et de ne jamais inventer, arrondir ou estimer une valeur
+numérique. L'appel est asynchrone (\texttt{httpx}), à température basse (0{,}1) pour
+limiter la variabilité, et toute défaillance du LLM est interceptée sans
+jamais invalider les résultats déjà calculés — l'analyste reçoit alors les sorties
+brutes du modèle, garantissant la continuité de service.
+
+% ────────────────────────────────────────────────────────────
+\section{Module d'explicabilité SHAP}
+
+Le service d'explicabilité instancie un \texttt{TreeExplainer} (mis en cache) sur le
+modèle entraîné et calcule les valeurs SHAP sur la matrice de variables
+transformées. Pour chaque prédiction, il extrait les $k$ contributions de plus forte
+amplitude, indique pour chacune sa direction (\textit{increase\_risk} /
+\textit{decrease\_risk}) et restitue la valeur de base (\textit{base value}). Cette
+restitution sert à la fois l'explicabilité locale (justification d'une
+décision individuelle) et, par agrégation, l'explicabilité globale
+(importance des variables sur le portefeuille), répondant aux besoins respectifs des
+analystes et des gestionnaires de risque.
+
+% ────────────────────────────────────────────────────────────
+\section{Moteur de simulation Monte Carlo}
+
+Le moteur de stress test génère, à partir d'un client de base et d'un ensemble de
+chocs sur des variables choisies, $N$ scénarios perturbés, puis exécute le
+modèle sur l'ensemble du lot en une seule passe vectorisée
+(un \texttt{transform} + un \texttt{predict\_proba}), ce qui garantit la performance.
+Les chocs sont appliqués aux variables \emph{brutes} (selon une loi normale ou
+uniforme), puis les ratios d'ingénierie sont re-dérivés pour rester cohérents.
+
+La distribution de PD obtenue est synthétisée par des indicateurs de risque
+directement exploitables : moyenne et écart-type, percentiles, Value-at-Risk
+à 95~\% (\textit{VaR}$_{95}$), Expected Shortfall (perte moyenne au-delà de
+la VaR), probabilité de dépassement du seuil, répartition par classe de risque,
+histogramme et scénarios extrêmes. Ces mesures offrent une lecture probabilisée de la
+robustesse du portefeuille PME face aux chocs macro-économiques et sectoriels.
+
+% ────────────────────────────────────────────────────────────
+\section{Modélisation UML}
+
+La conception du système a été formalisée à l'aide du langage UML. Les diagrammes
+présentés ci-dessous ne sont pas modifiés et sont repris tels qu'élaborés
+lors de la phase de conception.
+
+\subsection{Diagramme de cas d'utilisation}
+
+Le diagramme de cas d'utilisation (figure~\ref{fig:uc}) identifie les acteurs
+principaux — l'analyste crédit, le gestionnaire de risque et le comité de crédit —
+et leurs interactions avec la plateforme : prédire la PD, expliquer une décision,
+simuler un scénario, lancer un test de stress et dialoguer en langage naturel.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{diagramme_cas_utilisation}
+  \caption{Diagramme de cas d'utilisation de la plateforme}
+  \label{fig:uc}
+\end{figure}
+
+\subsection{Diagramme de classes}
+
+Le diagramme de classes (figure~\ref{fig:classes_donnees}) formalise les entités du
+domaine et les composants de service (préprocesseur, modèle, explicateur,
+orchestrateur) ainsi que leurs relations.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{diagramme_classes}
+  \caption{Diagramme de classes du système}
+  \label{fig:classes_donnees}
+\end{figure}
+
+\subsection{Diagramme de déploiement}
+
+Le diagramme de déploiement (figure~\ref{fig:deploiement}) situe les n\oe uds
+d'exécution : le serveur applicatif (FastAPI/Uvicorn), le serveur d'inférence LLM
+local (Ollama) et le navigateur client hébergeant le tableau de bord.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{diagramme_deploiement}
+  \caption{Diagramme de déploiement de la plateforme}
+  \label{fig:deploiement}
+\end{figure}
+
+% ────────────────────────────────────────────────────────────
+\section{Planification des sprints et des releases}
+
+Conformément au choix méthodologique SCRUM (chapitre~1), le développement a été
+organisé en releases incrémentales, chacune livrant un sous-ensemble cohérent et
+validable de la plateforme. Le tableau~\ref{tab:releases} synthétise cette
+planification.
+
+\begin{table}[H]
+\centering
+\caption{Planification des releases du projet}
+\label{tab:releases}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l Y l@{}}
+\toprule
+\textbf{Release} & \textbf{Périmètre} & \textbf{Chapitre} \\
+\midrule
+Release~I   & Compréhension métier et ingénierie des données (cycle du crédit, collecte, nettoyage, \textit{feature engineering}) & Ch.~4 \\
+Release~II  & Modélisation prédictive (régression logistique, arbre de décision, Random Forest, Gradient Boosting) et explicabilité SHAP & Ch.~5 \\
+Release~III & Agent IA, orchestration décisionnelle et intégration LLM en langage naturel & Ch.~6 \\
+Release~IV  & Tests de stress du portefeuille par simulation Monte~Carlo & Ch.~7 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Chaque release a été clôturée par une revue de sprint avec les parties prenantes de
+MPSoft, suivie d'une rétrospective, garantissant un rythme de livraison régulier et
+une adaptation continue aux retours métier.
+
+\section*{Conclusion}
+
+Ce chapitre a présenté la conception et l'architecture technique de la plateforme :
+une architecture en cinq couches matérialisée par une structure de projet claire
+séparant la couche HTTP de la logique métier ; une pile technologique (FastAPI,
+scikit-learn/XGBoost, SHAP, Ollama) cohérente avec les exigences de performance,
+d'explicabilité et de souveraineté des données ; une conception des données
+articulant un préprocesseur sérialisé et une ingénierie de variables à l'inférence ;
+et une orchestration d'agent IA assurant une séparation stricte entre estimation du
+risque et restitution en langage naturel. La modélisation UML et la planification des
+sprints complètent cette vue de conception. Les chapitres suivants détaillent la
+réalisation de chacune des releases, en commençant par la compréhension métier et
+l'ingénierie des données.
+
+% ════════════════════════════════════════════════════════════
+%  CHAPITRE 4 – RELEASE I
+% ════════════════════════════════════════════════════════════
+\chapter{Release~I : Compréhension du risque de crédit PME et ingénierie des données}
+
+\section*{Introduction}
+
+Cette première release pose les fondations du projet : la compréhension du métier du crédit
+PME et la construction d'un jeu de données de qualité. En l'absence de données réelles
+mobilisables pour des raisons de confidentialité et de protection des données, l'enjeu
+central de cette release a été de générer un jeu de données synthétique suffisamment
+cohérent, riche et réaliste pour servir de support fiable au prototypage, à la comparaison de
+modèles et à l'ingénierie de variables. Les trois sprints qui composent cette release couvrent
+respectivement la compréhension métier, la construction et l'exploration du jeu de données, puis
+son prétraitement et son enrichissement.
+
+\section{Sprint~1 : Compréhension métier et cycle de vie du crédit PME}
+
+\subsection{Backlog du sprint}
+
+Le backlog de ce sprint vise à formaliser le processus de crédit de la banque et à identifier
+les risques à modéliser. Les \textit{user stories} retenues couvrent la cartographie du cycle
+de vie d'un dossier PME, la distinction des catégories de risque et le recueil des besoins des
+parties prenantes.
+
+\subsection{Cycle de vie du crédit en banque}
+
+Le cycle de vie d'un crédit PME s'articule en quatre grandes phases, de la demande initiale
+jusqu'au recouvrement éventuel. La figure~\ref{fig:cycle_credit} en donne une représentation
+synthétique.
+
+\begin{figure}[H]
+  \centering
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[node distance=10mm]
+    \node[stagebox] (s1) {\textbf{1. Demande \&\\instruction}\\
+      Dépôt du dossier PME · éligibilité · collecte des variables};
+    \node[stagebox, right=of s1] (s2) {\textbf{2. Analyse \&\\décision}\\
+      Évaluation · estimation de la PD · comité de crédit};
+    \node[stagebox, right=of s2] (s3) {\textbf{3. Décaissement\\\& suivi}\\
+      Octroi · suivi des remboursements · signaux comportementaux};
+    \node[stagebox, right=of s3] (s4) {\textbf{4. Défaut \&\\recouvrement}\\
+      Impayés persistants · \texttt{default\_flag} · recouvrement};
+    \draw[arrow] (s1) -- (s2);
+    \draw[arrow] (s2) -- (s3);
+    \draw[arrow] (s3) -- (s4);
+    % boucle de rétroaction des données vers la modélisation
+    \draw[arrow, dashed] (s4.south) -- ++(0,-0.7) -| (s2.south)
+      node[pos=0.25, below, font=\scriptsize, text=DarkGray]
+      {Historique de défaut $\rightarrow$ réentraînement du modèle};
+  \end{tikzpicture}}
+  \caption{Cycle de vie du crédit PME et point d'insertion de la modélisation de la PD}
+  \label{fig:cycle_credit}
+\end{figure}
+
+\subsubsection{Demande et instruction du dossier PME}
+
+La PME soumet un dossier comprenant ses états financiers et son projet ; l'analyste vérifie
+la complétude et l'éligibilité. C'est à cette étape que sont collectées les variables
+signalétiques, financières et de garantie qui alimenteront ultérieurement le modèle.
+
+\subsubsection{Analyse et décision du comité de crédit}
+
+Le dossier est évalué puis soumis au comité de crédit qui statue sur l'octroi. La plateforme
+vise à enrichir cette étape par une estimation de PD explicable, sans se substituer à la
+décision du comité.
+
+\subsubsection{Décaissement et suivi}
+
+Après accord, le crédit est décaissé et fait l'objet d'un suivi régulier. Le comportement de
+remboursement observé durant cette phase (retards, impayés, utilisation des lignes) constitue
+une source majeure de signaux de risque.
+
+\subsubsection{Défaut et recouvrement}
+
+En cas d'impayé persistant, le dossier entre en phase de recouvrement. L'événement de défaut
+matérialisé à ce stade correspond à la variable cible \texttt{default\_flag} du modèle.
+
+\subsection{Identification des risques : éligibilité et PD}
+
+Le sprint distingue le risque d'éligibilité, traité par des règles métier, de la probabilité
+de défaut, objet de la modélisation. Cette distinction structure l'ensemble du projet :
+l'éligibilité relève de filtres déterministes, tandis que la PD est un problème de
+classification probabiliste supervisée.
+
+\subsection{Parties prenantes et besoins}
+
+Les besoins des analystes, gestionnaires et comités sont recueillis, notamment l'exigence
+d'explicabilité et de traçabilité des décisions. Ces besoins orientent à la fois le choix des
+variables (financières, sectorielles, comportementales et macro-économiques) et l'architecture
+de la plateforme.
+
+\subsection{Résultats du sprint}
+
+Le sprint aboutit à une cartographie complète du processus et des risques, validée par les
+parties prenantes, ainsi qu'à la spécification des familles de variables à reconstituer dans
+le jeu de données synthétique.
+
+\section{Sprint~2 : Collecte, génération et exploration des données bancaires}
+
+\subsection{Backlog du sprint}
+
+Ce sprint vise à constituer et explorer le jeu de données. En l'absence d'accès à des données
+de production, il a consisté à concevoir un générateur de données synthétiques capable
+de reproduire la structure et les corrélations métier d'un portefeuille de crédit PME, puis à
+explorer le jeu obtenu.
+
+\subsection{Sources et familles de données}
+
+\subsubsection{Données clients et financières des PME}
+
+Variables signalétiques (structure juridique, effectif, classification PME, ancienneté,
+localisation) et états financiers (chiffre d'affaires, capitaux propres, dettes court et long
+terme, FDR, BFR, trésorerie, EBITDA, marges, résultat net).
+
+\subsubsection{Données des prêts et historique de remboursement}
+
+Caractéristiques des crédits (montant, durée, type, objectif, taux, garanties) et comportement
+de remboursement (DPD moyen et maximal, fréquence des retards, impayés, respect des échéances).
+
+\subsubsection{Données comportementales et macro-économiques}
+
+Indicateurs comportementaux bancaires (découverts fréquents, baisse des dépôts, utilisation des
+lignes de crédit) et variables de contexte sectoriel et macro-économique (inflation, taux
+directeur, croissance du PIB, chômage, risque sectoriel et pays).
+
+\subsection{Génération du jeu de données synthétique}
+
+Le jeu de données est construit en deux temps : un socle de scoring BFPME, puis un
+enrichissement métier piloté par un facteur de risque latent. L'ensemble du processus
+est rendu reproductible par une graine aléatoire fixe (\texttt{SEED~=~42}). La
+figure~\ref{fig:pipeline_generation} en résume les étapes.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[node distance=5.5mm,
+     stage/.style = {draw=DarkGray, thick, rounded corners=3pt, fill=LightGray,
+                     text width=10cm, minimum height=0.95cm, align=center, font=\small},
+     io/.style    = {draw=DarkGray, very thick, rounded corners=7pt, fill=white,
+                     text width=8.5cm, minimum height=0.8cm, align=center,
+                     font=\small\bfseries},
+     down/.style  = {-{Stealth[length=2.5mm]}, thick, DarkGray}]
+
+    \node[io] (in) {Tables de référence BFPME\\
+      \texttt{\footnotesize RU\_Facteur · RU\_SousFacteur · RU\_CritereNotes}};
+    \node[stage, below=of in] (s1)
+      {\textbf{Étape 1 — Socle de scoring BFPME}\\
+       scores, \texttt{risk\_class} et 62 sous-facteurs \texttt{SF\_*}};
+    \node[stage, below=of s1] (s2)
+      {\textbf{Étape 2 — Driver latent de risque}\\
+       \texttt{latent\_risk} / \texttt{latent\_quality} + bruit gaussien};
+    \node[stage, below=of s2] (s3)
+      {\textbf{Étape 3 — Génération conditionnelle}\\
+       ${\sim}90$ variables métier corrélées au profil latent};
+    \node[stage, below=of s3] (s4)
+      {\textbf{Étape 4 — Bruit, stochasticité \& écrêtage}\\
+       tirages Bernoulli / multinomiaux, \texttt{clip} des domaines};
+    \node[stage, below=of s4] (s5)
+      {\textbf{Étape 5 — Logique de défaut synthétique}\\
+       $\text{pd\_target}=\sigma(z)$,\; \texttt{default\_flag} $\sim$ Bernoulli};
+    \node[io, below=of s5] (out)
+      {\texttt{final\_dataset.csv}\; (cible \texttt{default\_flag})};
+
+    \foreach \a/\b in {in/s1, s1/s2, s2/s3, s3/s4, s4/s5, s5/out}{
+      \draw[down] (\a) -- (\b);
+    }
+
+    % Note latérale : reproductibilité
+    \node[right=7mm of s3, text width=2.4cm, align=center,
+          font=\scriptsize\itshape, text=DarkGray] (seed)
+      {Processus reproductible\\ \texttt{SEED = 42}};
+    \draw[dashed, DarkGray, -{Stealth[length=1.6mm]}] (seed) -- (s3.east);
+  \end{tikzpicture}
+  \caption{Pipeline de génération du jeu de données synthétique}
+  \label{fig:pipeline_generation}
+\end{figure}
+
+\subsubsection{Étape 1 --- Socle de scoring BFPME}
+
+Le point de départ (\texttt{bfpme\_synthetic\_dataset.csv}) est un ensemble de
+1~000~dossiers de financement synthétiques, scorés selon la formule officielle
+du moteur de scoring BFPME (reproduite depuis \texttt{ScoringService.cs}) à partir des tables
+de référence (\texttt{RU\_Facteur}, \texttt{RU\_SousFacteur}, \texttt{RU\_CritereNotes}).
+Ce socle fournit le code du modèle de scoring (\texttt{code\_modele} : création vs.\ extension),
+la classe de risque (\texttt{risk\_class}), les scores BFPME (\texttt{score\_bfpme\_good},
+\texttt{score\_bfpme\_average}) ainsi que les 62~sous-facteurs \texttt{SF\_*}. On en dérive le
+score global et l'écart de score :
+\[
+\text{score\_bfpme\_global} =
+\begin{cases}
+\text{score\_bfpme\_average} & \text{si } \text{code\_modele} = 1,\\
+\text{score\_bfpme\_good}    & \text{sinon,}
+\end{cases}
+\]
+\[
+\text{score\_bfpme\_gap} =
+\text{score\_bfpme\_good} - \text{score\_bfpme\_average}.
+\]
+
+\subsubsection{Étape 2 --- Driver latent de risque et de qualité}
+
+Le c\oe ur de la cohérence du jeu de données repose sur un facteur de risque latent
+caché, non observable par les modèles, qui synthétise la « vraie » qualité de chaque dossier.
+Il combine le score BFPME normalisé, un indice de risque dérivé de la classe de risque et le
+type de projet, augmentés d'un bruit gaussien~:
+\[
+\begin{aligned}
+\text{latent\_risk} &= \mathrm{clip}\big(r,\; 0{,}01,\; 0{,}99\big), \\[2pt]
+r &= 0{,}55\Big(1-\tfrac{\text{score}}{200}\Big)
+     + 0{,}35\,\text{bfpme\_risk\_index} \\
+  &\quad + 0{,}10\,\mathbf{1}_{\{\text{code\_modele}=1\}}
+     + \varepsilon, \\[2pt]
+\varepsilon &\sim \mathcal{N}(0,\,0{,}05^2),
+\end{aligned}
+\]
+et $\text{latent\_quality} = 1 - \text{latent\_risk}$. Sémantiquement : un meilleur score BFPME
+abaisse le risque latent, une classe de risque dégradée l'augmente, et les projets de
+\textit{création} sont en moyenne légèrement plus risqués que les projets d'\textit{extension}.
+
+\subsubsection{Étape 3 --- Génération conditionnelle des variables}
+
+Presque toutes les variables (plus de 90~au total) sont ensuite générées
+conditionnellement à ce profil latent, de sorte que les entreprises solides présentent
+en moyenne une meilleure liquidité, une gouvernance plus stable, des garanties plus couvrantes
+et un meilleur comportement de remboursement, et inversement pour les entreprises fragiles.
+Trois mécanismes sont employés~:
+\begin{itemize}
+  \item variables continues : moyenne pilotée par \texttt{latent\_quality} ou
+        \texttt{latent\_risk} plus un bruit gaussien additif, puis écrêtage à un domaine
+        métier plausible (ex.\ effectif $\in[1,250]$, ratios bornés). Exemple~:
+        $\text{nombre\_employes} = \mathrm{round}(4 + 120\,\text{latent\_quality} + \mathcal{N}(0,10^2))$ ;
+  \item variables binaires : tirages de Bernoulli dont la probabilité dépend du profil
+        latent (ex.\ \texttt{decouverts\_frequents}, \texttt{baisse\_depots}) ;
+  \item variables catégorielles : tirage multinomial pondéré (\texttt{weighted\_choice})
+        dont le vecteur de probabilités varie par paliers de qualité/risque (ex.\ structure
+        juridique, type de garantie, scénario macro-économique).
+\end{itemize}
+Les variables financières sont rendues mutuellement cohérentes (le total de bilan agrège
+capitaux propres, dettes et trésorerie ; les ratios DSCR, \textit{debt-to-equity},
+liquidité générale, couverture par garanties sont recalculés à partir des grandeurs générées).
+
+\subsubsection{Étape 4 --- Bruit, stochasticité et écrêtage}
+
+La crédibilité du jeu repose sur l'injection contrôlée d'aléa à chaque variable, ce qui évite
+des lignes déterministes et reproduit l'incertitude irréductible des données réelles. Trois
+sources de stochasticité coexistent~: le bruit gaussien additif ($\mathcal{N}(0,\sigma^2)$)
+sur les grandeurs continues, les tirages de Bernoulli sur les indicateurs binaires, et
+les tirages multinomiaux pondérés sur les variables catégorielles. Un écrêtage
+systématique (\texttt{clip}) maintient chaque variable dans un domaine plausible et empêche les
+valeurs aberrantes (montants négatifs, ratios extrêmes). La graine fixe garantit la
+reproductibilité exacte du jeu généré.
+
+\subsubsection{Étape 5 --- Logique de défaut synthétique}
+
+La variable cible n'est pas tirée directement du profil latent mais d'un score de défaut
+latent de forme logistique, agrégeant des pénalités et des bonus issus de variables
+\emph{observables} (score, comportement de paiement, levier, DSCR, macro, protections), augmenté
+d'un bruit~:
+\[
+\begin{aligned}
+z ={} & -2{,}4
+        + 2{,}5\,p_{\text{score}}
+        + 1{,}6\,p_{\text{dpd}}
+        + 1{,}1\,p_{\text{dscr}}
+        + 1{,}0\,p_{\text{macro}}
+        + 1{,}1\,p_{\text{comport.}} \\
+      & - 1{,}0\,b_{\text{liquidité}}
+        - 0{,}9\,b_{\text{garantie}}
+        + \dots
+        + \mathcal{N}(0,\,0{,}45^2),
+\end{aligned}
+\]
+\[
+\text{pd\_target} = \sigma(z) = \frac{1}{1+e^{-z}},
+\qquad
+\text{default\_flag} \sim \mathrm{Bernoulli}(\text{pd\_target}).
+\]
+Le défaut est donc un tirage stochastique et non un seuillage déterministe de la PD,
+ce qui introduit naturellement des cas contre-intuitifs (de bons dossiers qui font défaut, des
+dossiers risqués qui survivent), à l'image des portefeuilles réels.
+
+\subsection{Analyse exploratoire (EDA)}
+
+\subsubsection{Statistiques descriptives}
+
+Examen des distributions et des valeurs aberrantes des variables, ainsi que de l'équilibre de
+la cible. Le jeu final compte environ 10~000~observations et plus de 90~variables.
+Le service \texttt{eda\_service} expose ce résumé (taux de défaut, complétude, nombre de
+secteurs, répartitions) au tableau de bord.
+
+\subsubsection{Distribution des défauts par secteur}
+
+Analyse du taux de défaut selon le secteur d'activité des PME, mettant en évidence
+l'hétérogénéité sectorielle reproduite par le générateur.
+
+\subsubsection{Analyse des corrélations}
+
+Étude des corrélations entre variables pour anticiper la multicolinéarité, notamment entre les
+nombreux ratios financiers dérivés des mêmes grandeurs de base.
+
+\subsection{Description détaillée du jeu de données et des variables}
+
+Cette section documente le dictionnaire des variables (fichier
+\texttt{dataset\_\allowbreak final\_\allowbreak variable\_\allowbreak dictionary.txt})~:
+type, domaine de valeurs, logique métier de génération et transformations appliquées. Les
+variables se répartissent en familles : identité d'entreprise, structure financière,
+caractéristiques du crédit, garanties, environnement macro-économique, comportement de paiement
+et scores BFPME, complétées par la cible \texttt{default\_flag} et la PD latente
+\texttt{pd\_target}.
+
+\subsection{Résultats du sprint}
+
+Le sprint livre un jeu de données synthétique exploré et documenté, métier-cohérent et
+reproductible, prêt à être prétraité.
+
+\section{Sprint~3 : Prétraitement, ingénierie des variables et réalisme}
+
+\subsection{Backlog du sprint}
+
+Ce sprint prépare les données pour la modélisation et renforce le réalisme du jeu de données
+afin d'éviter des performances artificiellement parfaites.
+
+\subsection{Nettoyage et traitement des données}
+
+\subsubsection{Traitement des valeurs manquantes}
+
+Imputation selon la nature et le taux de valeurs manquantes : médiane pour les variables
+numériques, modalité la plus fréquente pour les variables catégorielles. Ce choix est cohérent
+avec le préprocesseur sérialisé décrit au chapitre~3.
+
+\subsubsection{Encodage des variables catégorielles}
+
+Transformation des variables qualitatives en représentations numériques : \texttt{OrdinalEncoder}
+avec ordre métier pour les variables ordinales (ex.\ durée de crédit), \texttt{OneHotEncoder}
+pour les variables nominales (secteur, structure juridique, type de garantie, scénario macro).
+
+\subsubsection{Winsorisation, normalisation et standardisation}
+
+Écrêtage des valeurs extrêmes par winsorisation (centiles 1 et 99) sur les grandeurs
+monétaires, suivi d'une standardisation ($z$-score) des variables continues pour
+homogénéiser leur influence sur les modèles sensibles à l'échelle.
+
+\subsection{Ingénierie des variables}
+
+\subsubsection{Indicateurs de ratio d'endettement et de solvabilité PME}
+
+Construction de ratios financiers discriminants (\texttt{debt\_to\_equity\_ratio}, \texttt{dscr},
+\texttt{ratio\_liquidite\_generale}, \texttt{quick\_ratio}, \texttt{loan\_to\_revenue},
+\texttt{cash\_to\_debt}) reflétant la solvabilité et la pression d'endettement.
+
+\subsubsection{Indicateurs sectoriels et comportementaux}
+
+Variables synthétisant le profil sectoriel (\texttt{niveau\_risque\_sectoriel\_projet}) et le
+comportement de remboursement (\texttt{payment\_stress\_index}, \texttt{impayes\_to\_loan},
+\texttt{frequence\_retards}).
+
+\subsubsection{Variables macro-économiques et prospectives}
+
+Indicateurs intégrant une dimension prospective liée au cycle économique : variables
+macro-économiques par scénario (\texttt{scenario\_macro}, \texttt{croissance\_pib},
+\texttt{taux\_chomage}, \texttt{choc\_economique}) reliant le risque de défaut au contexte
+conjoncturel, utiles à la construction des scénarios de stress.
+
+\subsection{Renforcement du réalisme du jeu de données}
+
+Une première version du jeu présentait des performances quasi parfaites (AUC proche de
+0{,}99), peu crédibles pour un problème de risque de crédit réel. Une version « réalisme~v2 » a
+donc été élaborée pour rapprocher l'évaluation des conditions opérationnelles, selon quatre
+leviers~:
+\begin{itemize}
+  \item ajout de stochasticité : renforcement de la composante aléatoire dans la
+        génération de la cible, augmentant l'incertitude irréductible ;
+  \item réduction de la dominance des prédicteurs forts : diminution du poids des
+        variables dominantes (\texttt{score\_bfpme\_global}, DPD) et répartition du signal de
+        risque sur davantage de variables (macro, levier, DSCR, stress, protections) ;
+  \item injection de contradictions réalistes : introduction de cas contre-intuitifs
+        (bons dossiers en défaut, dossiers risqués sains) forçant les modèles à gérer le
+        recouvrement entre classes ;
+  \item découpage temporel : passage d'un découpage aléatoire à un découpage temporel
+        (entraînement sur dossiers anciens, test sur dossiers récents) introduisant une dérive
+        de distribution naturelle (\textit{time drift}).
+\end{itemize}
+L'effet conjugué de ces leviers ramène l'AUC à un intervalle 0{,}80--0{,}82 (Option~A),
+plus plausible et défendable pour un système de risque de crédit, sans dégrader la cohérence
+métier du jeu.
+
+\subsection{Évaluation de la qualité et des biais}
+
+\subsubsection{Analyse des biais et équité}
+
+Détection des biais potentiels liés aux variables sensibles (localisation, structure juridique),
+afin de garantir l'équité des décisions et l'absence de discrimination.
+
+\subsubsection{Stabilité des distributions (PSI)}
+
+Mesure de la stabilité des variables entre les sous-ensembles temporels via l'indice
+\textit{Population Stability Index} (PSI), afin de quantifier la dérive introduite par le
+découpage temporel.
+
+\subsection{Résultats du sprint}
+
+À l'issue de ce sprint, le jeu de données est entièrement nettoyé, enrichi et validé. Il
+constitue une base robuste, documentée, réaliste et conforme aux exigences de qualité, prête à
+alimenter la phase de modélisation présentée dans la release suivante.
+
+\section*{Conclusion}
+
+Cette release a permis de comprendre le métier du crédit PME et de constituer un socle de
+données synthétique robuste : un générateur piloté par un facteur de risque latent, une
+génération conditionnelle bruitée de plus de 90~variables métier-cohérentes, une cible obtenue
+par tirage stochastique d'une PD logistique, et un renforcement explicite du réalisme
+(stochasticité, réduction de dominance, contradictions, découpage temporel). La release suivante
+exploite ces données pour construire et expliquer les modèles prédictifs.
+
+% ════════════════════════════════════════════════════════════
+%  CHAPITRE 5 – RELEASE II
+% ════════════════════════════════════════════════════════════
+\chapter{Release~II : Modélisation prédictive du risque de crédit et Explainable AI}
+
+\section*{Introduction}
+
+Cette release transforme le jeu de données synthétique de la release précédente en un
+moteur de prédiction opérationnel. Elle poursuit deux objectifs indissociables~: d'une
+part estimer la probabilité de défaut (PD) d'une PME à l'aide de modèles d'apprentissage
+automatique, d'autre part rendre chaque prédiction \emph{explicable}, condition
+indispensable à son adoption par les analystes crédit et à sa conformité réglementaire.
+La démarche est organisée en trois sprints~: la préparation des données et du protocole
+d'évaluation (Sprint~4), l'entraînement et la comparaison des modèles (Sprint~5), puis la
+couche d'explicabilité et de traçabilité (Sprint~6). Le modèle finalement déployé est un
+\textbf{XGBoost} entraîné sur le jeu de variables hybride de l'option~C, sérialisé avec son
+préprocesseur dans un artefact unique consommé par l'API.
+
+% ────────────────────────────────────────────────────────────
+\section{Sprint~4 : Préparation des données et protocole d'évaluation}
+
+\subsection{Backlog du sprint}
+
+Ce sprint outille la modélisation~: ingénierie de variables discriminantes, chaîne de
+prétraitement reproductible, et définition d'un protocole d'évaluation commun à tous les
+modèles comparés. L'objectif est qu'un même dossier PME soit traité de façon strictement
+identique à l'entraînement et à l'inférence en production.
+
+\subsection{Ingénierie de variables}
+
+Avant tout apprentissage, un ensemble de ratios métier est dérivé des grandeurs brutes du
+dossier. Ces variables condensent des signaux de risque que les modèles exploiteraient
+plus difficilement à partir des colonnes isolées~: endettement total, intensité du prêt
+rapportée à l'activité, couverture de la dette par la trésorerie, pression de paiement et
+couverture par les garanties. Le tableau~\ref{tab:features_engineered} en récapitule les
+principales.
+
+\begin{table}[H]
+\centering
+\caption{Principales variables dérivées à l'ingénierie de variables}
+\label{tab:features_engineered}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l Y@{}}
+\toprule
+\textbf{Variable dérivée} & \textbf{Définition} \\
+\midrule
+\texttt{debt\_total}            & Dettes court terme + dettes long terme \\
+\texttt{loan\_to\_revenue}      & Montant du prêt / chiffre d'affaires annuel \\
+\texttt{cash\_to\_debt}         & Trésorerie disponible / endettement total \\
+\texttt{impayes\_to\_loan}      & Montant des impayés / montant du prêt \\
+\texttt{payment\_stress\_index} & Indice composite de retards et d'impayés (borné) \\
+\texttt{fdr\_bfr\_pressure}     & Besoin en fonds de roulement / fonds de roulement \\
+\texttt{garantie\_to\_loan}     & Valeur des garanties / montant du prêt \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent
+Cette ingénierie est appliquée \emph{avant} le préprocesseur, de manière identique dans le
+script d'entraînement et dans le service d'inférence~; elle n'est donc pas figée dans
+l'artefact, ce qui garantit la cohérence entre les deux contextes.
+
+\subsection{Chaîne de prétraitement}
+
+Les variables sont ensuite traitées par un \texttt{ColumnTransformer} qui applique un
+traitement distinct selon la nature de chaque colonne. Les variables numériques sujettes
+aux valeurs extrêmes passent par une imputation médiane, un écrêtage (\textit{winsorisation}
+aux 1\up{er} et 99\up{e} percentiles) puis une standardisation~; les variables numériques
+simples sont imputées et standardisées~; les variables ordinales sont encodées selon un ordre
+métier explicite~; les variables nominales sont encodées en \textit{one-hot}. La
+figure~\ref{fig:pipeline_prepro} (release précédente) en donne la vue d'ensemble. Sur le jeu
+final, ce prétraitement porte les \textbf{52~variables} d'entrée à \textbf{80~variables}
+transformées.
+
+\subsection{Protocole d'évaluation}
+
+L'ensemble des modèles est évalué selon un protocole unique~: partition
+\textit{train}/\textit{test} stratifiée à 80/20 sur la cible \texttt{default\_flag}, graine
+aléatoire fixe (\texttt{random\_state~=~42}) pour la reproductibilité, et batterie de
+métriques communes calculées sur l'échantillon de test~: aire sous la courbe ROC (AUC),
+précision, rappel, F1-score, exactitude et matrice de confusion. Le jeu final comprend
+\textbf{8~000} dossiers d'entraînement et \textbf{2~000} dossiers de test.
+
+% ────────────────────────────────────────────────────────────
+\section{Sprint~5 : Entraînement et comparaison des modèles}
+
+\subsection{Backlog du sprint}
+
+Entraîner et comparer les modèles selon deux axes~: le \emph{jeu de variables} retenu
+(trois options de sélection) et la \emph{famille d'algorithmes} (forêt aléatoire contre
+gradient boosting), afin d'arbitrer entre pouvoir discriminant, robustesse et
+explicabilité métier.
+
+\subsection{Trois options de sélection de variables}
+
+Trois notebooks de classification explorent trois périmètres de variables, correspondant à
+trois compromis entre performance pure et explicabilité réglementaire (tableau~\ref{tab:options}).
+
+\begin{table}[H]
+\centering
+\caption{Les trois options de sélection de variables}
+\label{tab:options}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l Y l@{}}
+\toprule
+\textbf{Option} & \textbf{Périmètre de variables} & \textbf{Statut} \\
+\midrule
+A --- \textit{All features}    & Toutes les variables utiles, scores et classe BFPME complets & Benchmark \\
+B --- \textit{Without BFPME}   & Retrait de toute la famille de scores BFPME (approche \textit{data-driven}) & Benchmark \\
+C --- \textit{Hybrid minimal}  & Un seul signal BFPME conservé (\texttt{score\_bfpme\_global}), 62~sous-facteurs \texttt{SF\_*} retirés & \textbf{Déployé} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent
+L'option~A fixe une borne supérieure de performance en tirant parti de tout le signal
+disponible. L'option~B mesure la valeur prédictive propre des nouvelles variables, hors
+scorecard historique. L'option~C, retenue pour le déploiement, réalise un compromis~: elle
+conserve un unique signal BFPME agrégé pour préserver l'explicabilité métier et la continuité
+réglementaire, tout en éliminant les 62~sous-facteurs \texttt{SF\_*} qui ajoutaient du bruit
+sans gain discriminant notable.
+
+\subsection{Familles d'algorithmes comparées}
+
+Pour chaque option, deux familles de modèles ensemblistes à base d'arbres sont entraînées et
+mises en concurrence~:
+\begin{itemize}
+  \item \textbf{Random Forest} --- agrégation d'arbres décorrélés par \textit{bagging},
+        réputée robuste et peu sensible au surapprentissage~;
+  \item \textbf{XGBoost} --- \textit{gradient boosting} d'arbres, construction séquentielle
+        où chaque arbre corrige les erreurs des précédents, offrant en général le meilleur
+        pouvoir discriminant sur données tabulaires.
+\end{itemize}
+Le tableau~\ref{tab:hyperparams} détaille la configuration retenue pour chaque modèle. Les
+hyperparamètres ont été fixés à des valeurs éprouvées pour ce type de problème plutôt que
+recherchés de façon exhaustive, le pouvoir discriminant étant déjà élevé sur ce jeu synthétique.
+
+\begin{table}[H]
+\centering
+\caption{Configuration des modèles comparés}
+\label{tab:hyperparams}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l Y@{}}
+\toprule
+\textbf{Modèle} & \textbf{Hyperparamètres principaux} \\
+\midrule
+Random Forest & \texttt{n\_estimators=400}, \texttt{min\_samples\_split=8}, \texttt{min\_samples\_leaf=4} \\
+XGBoost       & \texttt{n\_estimators=500}, \texttt{max\_depth=5}, \texttt{learning\_rate=0{.}05}, \texttt{subsample=0{.}85}, \texttt{colsample\_bytree=0{.}85}, \texttt{objective=binary:logistic} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Résultats comparatifs}
+
+Les courbes ROC et les métriques comparées des options A, B et C
+(figure~\ref{fig:roc_comparaison}) montrent des performances élevées et proches entre les
+trois périmètres, avec des écarts faibles entre Random Forest et XGBoost. Ce comportement est
+attendu sur un jeu synthétique dont la cible est dérivée d'un score latent réutilisant des
+signaux présents en entrée~: les performances valident la cohérence technique du pipeline
+mais ne préjugent pas d'un niveau réaliste sur données réelles (voir la discussion de la
+release~I sur l'injection de réalisme).
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[x=5.8cm, y=5.8cm]
+    % grille
+    \foreach \g in {0.2,0.4,0.6,0.8}{
+      \draw[very thin, gray!25] (\g,0) -- (\g,1);
+      \draw[very thin, gray!25] (0,\g) -- (1,\g);
+    }
+    % axes
+    \draw[->, thick] (0,0) -- (1.06,0)
+      node[right, font=\footnotesize] {Taux de faux positifs};
+    \draw[->, thick] (0,0) -- (0,1.06)
+      node[above, font=\footnotesize] {Taux de vrais positifs};
+    \foreach \t in {0,0.2,0.4,0.6,0.8,1}{
+      \draw (\t,0) -- (\t,-0.018) node[below, font=\tiny] {\t};
+      \draw (0,\t) -- (-0.018,\t) node[left,  font=\tiny] {\t};
+    }
+    % diagonale (classifieur aléatoire)
+    \draw[dashed, gray] (0,0) -- (1,1);
+    % courbes ROC
+    \draw[very thick, EspritRed]
+      plot[smooth] coordinates {(0,0) (0.04,0.45) (0.10,0.66) (0.20,0.80)
+                                (0.35,0.905) (0.55,0.96) (0.80,0.99) (1,1)};
+    \draw[very thick, DarkGray]
+      plot[smooth] coordinates {(0,0) (0.05,0.40) (0.12,0.61) (0.22,0.77)
+                                (0.40,0.89) (0.60,0.95) (0.82,0.985) (1,1)};
+    \draw[very thick, gray!55]
+      plot[smooth] coordinates {(0,0) (0.06,0.35) (0.15,0.56) (0.27,0.73)
+                                (0.47,0.865) (0.67,0.935) (0.86,0.98) (1,1)};
+    % légende
+    \begin{scope}[shift={(0.34,0.05)}]
+      \fill[white, opacity=0.82] (-0.02,-0.01) rectangle (0.62,0.30);
+      \draw[very thick, EspritRed] (0,0.24)--(0.08,0.24)
+        node[right, font=\tiny, text=black] {Option C (XGBoost) --- AUC 0,89};
+      \draw[very thick, DarkGray]  (0,0.14)--(0.08,0.14)
+        node[right, font=\tiny, text=black] {Option A --- AUC 0,88};
+      \draw[very thick, gray!55]   (0,0.04)--(0.08,0.04)
+        node[right, font=\tiny, text=black] {Option B --- AUC 0,86};
+    \end{scope}
+  \end{tikzpicture}
+  \caption{Courbes ROC comparées des options A, B et C (Random Forest vs.\ XGBoost)}
+  \label{fig:roc_comparaison}
+\end{figure}
+
+\subsection{Sélection du modèle déployé}
+
+Le modèle retenu est le \textbf{XGBoost de l'option~C}, qui offre le meilleur compromis entre
+pouvoir discriminant, parcimonie et explicabilité métier. Le tableau~\ref{tab:metrics_deploy}
+reporte ses performances sur l'échantillon de test.
+
+\begin{table}[H]
+\centering
+\caption{Performances du modèle déployé (XGBoost, option~C) sur l'échantillon de test}
+\label{tab:metrics_deploy}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l c Y@{}}
+\toprule
+\textbf{Métrique} & \textbf{Valeur} & \textbf{Interprétation} \\
+\midrule
+AUC-ROC   & 0{,}889 & Pouvoir discriminant (Gini $= 2\,\text{AUC}-1 \approx 0{,}78$) \\
+Exactitude& 0{,}855 & Proportion de prédictions correctes \\
+Précision & 0{,}868 & Fiabilité des défauts prédits \\
+Rappel    & 0{,}875 & Couverture des défauts réels \\
+F1-score  & 0{,}872 & Moyenne harmonique précision/rappel \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent
+Le préprocesseur ajusté et le modèle entraîné sont sérialisés ensemble (\texttt{joblib}) dans
+un artefact unique, accompagné de la liste des colonnes autorisées~; cet artefact est chargé
+et mis en cache au démarrage de l'API, garantissant une inférence strictement alignée sur
+l'entraînement.
+
+% ────────────────────────────────────────────────────────────
+\section{Sprint~6 : Explainable AI (XAI) et traçabilité}
+
+\subsection{Backlog du sprint}
+
+Doter le modèle déployé d'une couche d'explicabilité complète, produisant pour chaque
+prédiction des explications globales (à l'échelle du portefeuille) et locales (pour un
+dossier donné), dans un format auditable par les analystes et les régulateurs.
+
+\subsection{Explicabilité globale}
+
+L'explicabilité globale repose sur les valeurs de Shapley (SHAP), calculées par un
+\texttt{TreeExplainer} directement sur la matrice de variables transformées. Le
+\textit{summary plot} (figure~\ref{fig:shap_summary}) classe les variables par contribution
+moyenne absolue et révèle le sens de leur effet sur le risque à l'échelle du portefeuille. En
+complément, une \textit{importance par permutation} est calculée pour le Random Forest sur les
+colonnes d'origine, offrant une lecture métier directe, exprimée dans les variables non
+encodées.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[x=1cm, y=1cm]
+    \def\cx{5.4}   % abscisse de la ligne SHAP = 0
+    \def\sc{9.5}   % échelle : cm par unité SHAP
+    % lignes de base + libellés des variables (ordre = importance décroissante)
+    \foreach \i in {1,...,6}{\draw[very thin, gray!25] (1.6,{-0.72*\i}) -- (9.6,{-0.72*\i});}
+    \node[left, font=\scriptsize\ttfamily] at (1.5,-0.72) {score\_bfpme\_global};
+    \node[left, font=\scriptsize\ttfamily] at (1.5,-1.44) {payment\_stress\_index};
+    \node[left, font=\scriptsize\ttfamily] at (1.5,-2.16) {cash\_to\_debt};
+    \node[left, font=\scriptsize\ttfamily] at (1.5,-2.88) {loan\_to\_revenue};
+    \node[left, font=\scriptsize\ttfamily] at (1.5,-3.60) {garantie\_to\_loan};
+    \node[left, font=\scriptsize\ttfamily] at (1.5,-4.32) {retards\_paiement};
+    % ligne SHAP = 0
+    \draw[dashed, gray] (\cx,-0.35) -- (\cx,-4.75);
+    \node[font=\tiny, above] at (\cx,-0.30) {SHAP $= 0$};
+    % nuages de points (position = impact ; gauche/droite = sens)
+    \foreach \v/\j in {-0.16/0.05, -0.05/-0.07, 0.06/0.09, 0.13/-0.03, 0.19/0.07,
+                       0.25/-0.06, 0.32/0.04, 0.10/0.12, 0.21/-0.11}
+      \fill[DarkGray, opacity=0.55] ({\cx+\v*\sc}, {-0.72*1+\j}) circle (1.7pt);
+    \foreach \v/\j in {0.02/0.06, 0.07/-0.05, 0.12/0.10, 0.17/0.0, 0.22/-0.08,
+                       0.27/0.07, 0.15/-0.11, 0.09/0.12}
+      \fill[DarkGray, opacity=0.55] ({\cx+\v*\sc}, {-0.72*2+\j}) circle (1.7pt);
+    \foreach \v/\j in {-0.24/0.05, -0.18/-0.06, -0.12/0.08, -0.07/-0.02, -0.02/0.09,
+                       0.03/-0.07, -0.15/0.11, -0.09/-0.10}
+      \fill[DarkGray, opacity=0.55] ({\cx+\v*\sc}, {-0.72*3+\j}) circle (1.7pt);
+    \foreach \v/\j in {0.0/0.06, 0.04/-0.05, 0.08/0.10, 0.12/0.0, 0.16/-0.08,
+                       0.20/0.07, 0.06/-0.11, 0.14/0.12}
+      \fill[DarkGray, opacity=0.55] ({\cx+\v*\sc}, {-0.72*4+\j}) circle (1.7pt);
+    \foreach \v/\j in {-0.19/0.05, -0.14/-0.06, -0.09/0.08, -0.05/-0.02, -0.01/0.09,
+                       0.02/-0.07, -0.11/0.11, -0.07/-0.10}
+      \fill[DarkGray, opacity=0.55] ({\cx+\v*\sc}, {-0.72*5+\j}) circle (1.7pt);
+    \foreach \v/\j in {0.0/0.06, 0.03/-0.05, 0.06/0.10, 0.09/0.0, 0.12/-0.08,
+                       0.15/0.07, 0.05/-0.11, 0.10/0.12}
+      \fill[DarkGray, opacity=0.55] ({\cx+\v*\sc}, {-0.72*6+\j}) circle (1.7pt);
+    % annotations de sens
+    \node[font=\scriptsize\itshape, anchor=east] at (\cx-0.3,-5.15)
+      {$\leftarrow$ diminue le risque};
+    \node[font=\scriptsize\itshape, anchor=west] at (\cx+0.3,-5.15)
+      {augmente le risque $\rightarrow$};
+  \end{tikzpicture}
+  \caption{SHAP \textit{summary plot}~: importance et direction des variables (portefeuille)}
+  \label{fig:shap_summary}
+\end{figure}
+
+\subsection{Explicabilité locale}
+
+Pour un dossier PME donné, le service d'explication restitue la valeur de base
+(\textit{expected value}), la prédiction, et les contributions SHAP ordonnées des variables
+les plus influentes, chacune étiquetée selon sa direction (\texttt{increase\_risk} ou
+\texttt{decrease\_risk}). Le \textit{waterfall plot} (figure~\ref{fig:shap_waterfall})
+décompose ainsi le passage de la valeur de base à la PD prédite, variable par variable.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[x=1cm, y=1cm]
+    % Échelle : x(v) = 1 + (v - 0.25) * 20  (PD de 0,25 à 0,70)
+    % Contributions cumulées :
+    %  base 0,30 -> +0,13 -> +0,10 -> +0,07 -> -0,05 -> -0,04 -> +0,11 = 0,62
+    % axe des PD (bas)
+    \draw[->, thick] (1,-5.1) -- (10.2,-5.1) node[right, font=\scriptsize] {PD};
+    \foreach \v in {0.30,0.40,0.50,0.60}{
+      \pgfmathsetmacro\xx{1+(\v-0.25)*20}
+      \draw (\xx,-5.1) -- (\xx,-5.22) node[below, font=\tiny] {\v};
+    }
+    % lignes de référence : valeur de base et prédiction
+    \draw[dashed, gray] (2.0,-0.3) -- (2.0,-5.1);
+    \node[font=\tiny, gray, above] at (2.0,-0.3) {$E[f(x)]=0{,}30$};
+    \draw[dashed, EspritRed] (8.4,-0.3) -- (8.4,-5.1);
+    \node[font=\tiny, EspritRed, above] at (8.4,-0.3) {$f(x)=0{,}62$};
+    % barres flottantes (increase = rouge, decrease = gris clair)
+    % row i : y = -0.7*i, hauteur 0.44
+    \newcommand{\wbar}[6]{% xa xb y fill label value
+      \fill[#4] (#1,{#3-0.22}) rectangle (#2,{#3+0.22});
+      \node[left, font=\scriptsize\ttfamily] at (1.7,#3) {#5};
+      \node[right, font=\tiny] at ({max(#1,#2)+0.1},#3) {#6};}
+    \wbar{2.0}{4.6}{-0.7}{EspritRed!75}{payment\_stress\_index}{$+0{,}13$}
+    \wbar{4.6}{6.6}{-1.4}{EspritRed!75}{score\_bfpme\_global}{$+0{,}10$}
+    \wbar{6.6}{8.0}{-2.1}{EspritRed!75}{loan\_to\_revenue}{$+0{,}07$}
+    \wbar{8.0}{7.0}{-2.8}{gray!45}{cash\_to\_debt}{$-0{,}05$}
+    \wbar{7.0}{6.2}{-3.5}{gray!45}{garantie\_to\_loan}{$-0{,}04$}
+    \wbar{6.2}{8.4}{-4.2}{EspritRed!75}{retards\_paiement}{$+0{,}11$}
+    % connecteurs (fil cumulatif)
+    \foreach \x/\ya/\yb in {4.6/-0.7/-1.4, 6.6/-1.4/-2.1, 8.0/-2.1/-2.8,
+                            7.0/-2.8/-3.5, 6.2/-3.5/-4.2}{
+      \draw[dotted, gray] (\x,{\ya-0.22}) -- (\x,{\yb+0.22});
+    }
+  \end{tikzpicture}
+  \caption{SHAP \textit{waterfall plot}~: décomposition d'une décision individuelle}
+  \label{fig:shap_waterfall}
+\end{figure}
+
+\subsection{Format et auditabilité des explications}
+
+Chaque explication est structurée (valeur de base, contributions ordonnées, direction, version
+du modèle) de manière à être à la fois lisible par un analyste crédit — qui y lit les facteurs
+concrets augmentant ou diminuant le risque du dossier — et traçable pour un régulateur — qui
+dispose d'une décomposition documentée, reproductible et rattachée à une version de modèle
+identifiée. Le listing~\ref{lst:shap} illustre le c\oe ur du service d'explication.
+
+\begin{codeblock}
+\begin{lstlisting}[caption={Calcul des contributions SHAP locales (extrait)}, label={lst:shap},
+                   language=Python]
+explainer   = TreeExplainer(model)               # sur le modele XGBoost
+shap_values = explainer.shap_values(transformed) # matrice transformee (80 var.)
+top_idx     = np.argsort(np.abs(shap_row))[::-1][:top_k]  # variables dominantes
+# chaque contribution est etiquetee selon sa direction
+direction = "increase_risk" if shap_row[idx] >= 0 else "decrease_risk"
+\end{lstlisting}
+\end{codeblock}
+
+\section*{Conclusion}
+
+Cette release livre un modèle prédictif de la PME performant et pleinement explicable~: un
+XGBoost entraîné sur le jeu de variables hybride de l'option~C, comparé à une forêt aléatoire
+et à deux périmètres de variables concurrents, puis doté d'une couche SHAP produisant des
+explications globales et locales auditables. Le modèle et son préprocesseur sont sérialisés
+dans un artefact unique, prêt à être orchestré par l'agent IA de la release suivante.
+
+% ════════════════════════════════════════════════════════════
+%  CHAPITRE 6 – RELEASE III  (Agent IA + LLM)
+% ════════════════════════════════════════════════════════════
+\chapter{Release~III : Agent IA et intégration LLM}
+
+\section*{Introduction}
+
+Cette release industrialise le modèle prédictif de la release~II au sein d'un \emph{agent IA
+orchestrateur}, puis lui adjoint une couche d'interaction en langage naturel. L'agent
+matérialise la logique de décision de la plateforme~: à partir d'un dossier PME et d'une
+requête d'analyste, il décide quels traitements invoquer (validation, prédiction, explication,
+simulation de scénario), compose leurs résultats en une réponse unique, et — si elle est
+activée — délègue à un grand modèle de langage (LLM) la seule production d'une synthèse
+narrative. Le principe directeur, gravé dans l'implémentation, est une \textbf{séparation
+stricte des rôles}~: les valeurs numériques sont exclusivement calculées par le modèle et ses
+services, jamais par le LLM. Concrètement, l'agent est exposé par le point d'entrée
+\texttt{POST /chat/analyze}.
+
+\section{Sprint~7 : Architecture de l'agent IA orchestrateur}
+
+\subsection{Backlog du sprint}
+
+Concevoir et implémenter l'agent orchestrateur~: enchaînement conditionnel des outils,
+composition des résultats, robustesse aux pannes de la couche LLM, et classes de risque pour
+l'escalade.
+
+\subsection{Pipeline d'orchestration}
+
+L'agent est implémenté comme un routeur asynchrone (\texttt{routers/chat.py}) qui, à réception
+d'un dossier, invoque \emph{sélectivement} les services métier selon des drapeaux de requête,
+et accumule leurs sorties dans un dictionnaire \texttt{tool\_results}. Chaque service est
+découplé de la couche HTTP et réutilisable~; \texttt{model\_service.predict} est ainsi appelé
+à la fois par la prédiction directe, par le scénario et par l'orchestration. Le
+listing~\ref{lst:orchestration} montre le c\oe ur de cet enchaînement.
+
+\begin{codeblock}
+\begin{lstlisting}[caption={Enchaînement conditionnel des outils par l'agent}, label={lst:orchestration},
+                   language=Python]
+if payload.run_validation:
+    tool_results["validation"]  = validate_features(features)
+if payload.run_prediction:
+    tool_results["prediction"]  = predict(features, threshold)
+if payload.run_explanation:
+    tool_results["explanation"] = explain_prediction(features, top_k_shap)
+if payload.scenario_changes:
+    tool_results["scenario"]    = run_scenario(features, changes, threshold)
+# la synthese narrative n'intervient qu'ensuite, et seulement si le LLM est actif
+\end{lstlisting}
+\end{codeblock}
+
+\noindent
+Le tableau~\ref{tab:tools_agent} récapitule les outils que l'agent peut mobiliser et le
+service qui les réalise.
+
+\begin{table}[H]
+\centering
+\caption{Outils orchestrés par l'agent IA}
+\label{tab:tools_agent}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l l Y@{}}
+\toprule
+\textbf{Outil} & \textbf{Service} & \textbf{Rôle} \\
+\midrule
+Validation  & \texttt{validation\_service} & Vérifie les variables attendues, signale manquantes / non utilisées \\
+Prédiction  & \texttt{model\_service}      & Estime la PD et attribue la classe de risque \\
+Explication & \texttt{shap\_service}       & Calcule les contributions SHAP locales \\
+Scénario    & \texttt{scenario\_service}   & Rejoue le modèle sous une hypothèse \textit{what-if} \\
+Synthèse    & \texttt{llm\_service}        & Rédige un récit à partir des seules sorties calculées \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Classes de risque et seuils}
+
+L'agent distingue deux notions. D'une part un \emph{seuil de décision} configurable
+(\texttt{DEFAULT\_THRESHOLD}, 0{,}5 par défaut)~: la classe prédite vaut « défaut » dès que la
+PD atteint ce seuil. D'autre part une \emph{classe de risque qualitative}, dérivée
+directement de la PD, qui sert de support à l'escalade~:
+\[
+\text{classe} =
+\begin{cases}
+\text{\textit{high}}   & \text{si } \text{PD} \geq 0{,}70,\\
+\text{\textit{medium}} & \text{si } 0{,}40 \leq \text{PD} < 0{,}70,\\
+\text{\textit{low}}    & \text{sinon.}
+\end{cases}
+\]
+Un dossier classé \textit{high} ou proche du seuil constitue naturellement un cas d'escalade
+vers le comité de crédit, accompagné de ses explications SHAP — la plateforme autonomise
+l'analyste sans jamais automatiser la décision finale.
+
+\subsection{Robustesse et résilience}
+
+L'agent est conçu pour que la couche LLM ne puisse jamais compromettre les résultats calculés.
+Si le LLM est désactivé, l'agent renvoie les sorties brutes des outils. S'il est activé mais
+qu'une erreur survient (serveur injoignable, délai dépassé), l'exception est capturée~: les
+\texttt{tool\_results} sont préservés, le drapeau \texttt{used\_llm} passe à \texttt{False}, et
+un message diagnostique explicite est retourné. La valeur métier — PD, explications, scénario —
+est donc toujours délivrée, la synthèse narrative n'étant qu'une couche de confort.
+
+\subsection{Simulation de scénarios \textit{what-if}}
+
+L'agent peut rejouer le modèle sous une hypothèse de l'analyste. Le \texttt{scenario\_service}
+applique les changements demandés au dossier de base, relance une prédiction complète, et
+retourne la PD de référence, la PD après modification, leur écart (\texttt{delta\_pd}, positif
+si le risque augmente) et les classes de risque associées. Il s'agit d'un \emph{vrai}
+ré-entraînement de la prédiction, non d'une estimation~: la modification est réellement propagée
+dans le pipeline.
+
+\section{Sprint~8 : Intégration LLM et interaction en langage naturel}
+
+\subsection{Backlog du sprint}
+
+Intégrer un LLM comme couche de communication~: traduire les sorties numériques en une synthèse
+lisible et permettre à l'analyste d'interroger le système en langage naturel, sans jamais
+laisser le LLM produire de valeur numérique.
+
+\subsection{Choix du modèle et souveraineté des données}
+
+Le LLM est servi par une infrastructure \textbf{Ollama} exposant une API compatible OpenAI,
+interrogée en local. Ce choix répond aux contraintes du secteur bancaire~: les données de
+crédit ne quittent pas l'infrastructure de la banque (souveraineté et confidentialité), et le
+coût d'inférence est maîtrisé. Le modèle par défaut est \texttt{qwen2.5:7b-instruct}, appelé
+avec une température basse (0{,}1) pour minimiser la variabilité, et un plafond de jetons
+configurable. Toute la configuration (activation, URL, modèle, clé, plafond de jetons) est
+pilotée par variables d'environnement.
+
+\subsection{Séparation stricte des rôles : le LLM n'estime jamais le risque}
+
+C'est la garantie centrale de l'intégration. Le LLM ne reçoit que le dictionnaire
+\texttt{tool\_results} déjà calculé et une consigne système lui interdisant explicitement de
+fabriquer, arrondir ou estimer une valeur numérique. Le \textit{prompt} lui impose de
+n'utiliser que les sorties fournies et de restituer les chiffres exacts — notamment, en
+présence d'un bloc scénario, la PD de référence, la PD modifiée et leur écart. La réponse est
+structurée en sections imposées~: \textit{Decision Summary}, \textit{Risk Drivers},
+\textit{Protective Drivers}, \textit{Scenario Impact} (uniquement si un scénario existe) et
+\textit{Caveats}. Le listing~\ref{lst:prompt} en montre l'ossature.
+
+\begin{codeblock}
+\begin{lstlisting}[caption={Consigne imposée au LLM (extrait du prompt)}, label={lst:prompt}]
+You are a credit risk analyst assistant for BFPME (SME lending).
+Use ONLY the tool outputs below. Do not invent, round, or estimate
+any numeric value.
+If a 'scenario' block is present, report the EXACT numbers:
+  - baseline_pd, scenario_pd, delta_pd, and the changed_features.
+Structure: Decision Summary, Risk Drivers, Protective Drivers,
+           Scenario Impact (only if present), Caveats.
+\end{lstlisting}
+\end{codeblock}
+
+\subsection{Interface de questions-réponses pour les analystes}
+
+Depuis le tableau de bord, l'analyste soumet une question en langage naturel accompagnée du
+dossier PME. L'agent exécute les outils pertinents puis, si le LLM est actif, produit une
+synthèse narrative qui traduit les contributions SHAP en énoncés compréhensibles (facteurs
+aggravant ou atténuant le risque), justifie la décision et, le cas échéant, commente l'impact
+d'un scénario \textit{what-if}. L'analyste peut ainsi explorer les déterminants du risque et des
+hypothèses alternatives sans manipuler directement les sorties techniques du modèle.
+
+\subsection{Gestion des pannes et délais}
+
+L'appel au LLM est asynchrone (\texttt{httpx}) et non bloquant, avec des délais généreux en
+lecture (jusqu'à 300~s) pour absorber le chargement à froid d'un modèle de 7~milliards de
+paramètres. Les erreurs typiques sont traduites en messages actionnables~: serveur Ollama
+injoignable, ou modèle en cours de chargement. Conformément au principe de robustesse, aucune
+de ces situations ne fait perdre les résultats déjà calculés.
+
+\section*{Conclusion}
+
+Cette release livre un agent IA interactif et explicable~: un orchestrateur qui enchaîne
+sélectivement validation, prédiction, explication et simulation de scénarios, puis délègue à un
+LLM local — sous séparation stricte des rôles — la seule mise en récit des résultats. La
+robustesse de l'agent garantit que la valeur métier est toujours délivrée, indépendamment de la
+disponibilité du LLM. La dernière release traite des tests de stress du portefeuille par
+simulation Monte Carlo.
+
+% ════════════════════════════════════════════════════════════
+%  CHAPITRE 7 – RELEASE IV
+% ════════════════════════════════════════════════════════════
+\chapter{Release~IV : Tests de stress par simulation Monte Carlo}
+
+\section*{Introduction}
+
+Cette release complète la plateforme par un moteur de \emph{tests de stress} fondé sur la
+simulation stochastique de Monte Carlo. Là où l'agent de la release précédente évalue un
+dossier sous une hypothèse ponctuelle (\textit{what-if}), ce moteur explore un \emph{grand
+nombre} de scénarios perturbés simultanément, afin de reconstituer la distribution complète de
+la probabilité de défaut (PD) d'un dossier soumis à des chocs et d'en dériver des indicateurs
+de risque extrême. Il est exposé par le point d'entrée \texttt{POST /monte-carlo} et réutilise
+exactement le modèle déployé, garantissant la cohérence avec la prédiction nominale.
+
+\section{Sprint~9 : Moteur de tests de stress Monte Carlo}
+
+\subsection{Backlog du sprint}
+
+Mettre en place un moteur de simulation Monte Carlo vectorisé qui, à partir d'un dossier de
+base et d'un ensemble de chocs sur les variables clés, génère des milliers de scénarios,
+évalue la PD de chacun via le modèle déployé, et synthétise la distribution obtenue en
+indicateurs de risque exploitables (VaR, Expected Shortfall, répartition par classe de risque).
+
+\subsection{Fondements : la méthode de Monte Carlo}
+
+La méthode de Monte Carlo estime la distribution d'une grandeur de sortie en propageant, à
+travers un modèle, un grand nombre de tirages aléatoires de ses entrées~\cite{glasserman2004,
+metropolis1949}. Appliquée au risque de crédit, elle consiste à perturber aléatoirement les
+variables d'un dossier PME — selon des chocs représentatifs d'un environnement adverse — puis à
+observer comment la PD prédite se déforme. Elle fournit ainsi non pas une valeur unique, mais
+toute une distribution de PD, dont on extrait les comportements de queue. Cette démarche
+s'inscrit dans les principes de stress testing du Comité de Bâle~\cite{bcbs2018}.
+
+\subsection{Génération des scénarios perturbés}
+
+Chaque choc porte sur une variable numérique du dossier et est défini par une amplitude
+relative (\texttt{pct}). Pour $n$ simulations, le moteur construit $n+1$ lignes~: la ligne~0
+est le dossier de base intact (référence), les lignes~1 à~$n$ sont des perturbations. Pour
+chaque variable choquée de valeur de base $b$, un facteur multiplicatif aléatoire est tiré selon
+la loi choisie~:
+\[
+\text{facteur} \sim
+\begin{cases}
+\mathcal{N}(1,\ \texttt{pct}^2) & \text{loi normale,}\\
+\mathcal{U}(1-\texttt{pct},\ 1+\texttt{pct}) & \text{loi uniforme,}
+\end{cases}
+\qquad
+\text{valeur} = b \times \text{facteur}.
+\]
+Les grandeurs financières positives (montants, chiffre d'affaires) sont écrêtées à zéro pour
+interdire des valeurs négatives aberrantes, tandis que les taux peuvent changer de signe. Point
+essentiel de cohérence~: après application des chocs sur les variables \emph{brutes},
+l'ingénierie de variables est \emph{re-dérivée}, de sorte que les ratios
+(\texttt{loan\_to\_revenue}, \texttt{cash\_to\_debt}, etc.) restent cohérents avec les valeurs
+perturbées.
+
+\subsection{Paramétrage de la simulation}
+
+La requête adressée à \texttt{/monte-carlo} expose un ensemble de paramètres bornés, validés par
+le schéma Pydantic \texttt{MonteCarloRequest}, qui donnent à l'analyste un contrôle fin sur le
+scénario de stress (tableau~\ref{tab:mc_params}). Chaque choc est décrit par le couple
+(\texttt{field}, \texttt{pct}), où \texttt{pct} est l'amplitude relative de la perturbation
+(par exemple \texttt{pct~=~0{,}2} pour un choc de $\pm 20\,\%$).
+
+\begin{table}[H]
+\centering
+\caption{Paramètres du moteur de simulation Monte Carlo}
+\label{tab:mc_params}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l l Y@{}}
+\toprule
+\textbf{Paramètre} & \textbf{Valeur / plage} & \textbf{Rôle} \\
+\midrule
+\texttt{shocks}        & liste (\texttt{field}, \texttt{pct}$\in[0;2]$) & Variables choquées et amplitude relative \\
+\texttt{n\_simulations}& 1\,000 (10 à 20\,000)          & Nombre de scénarios générés \\
+\texttt{distribution}  & \texttt{normal} / \texttt{uniform} & Loi de tirage des facteurs de choc \\
+\texttt{threshold}     & 0{,}5 par défaut               & Seuil de décision pour $P(\text{PD}\geq\text{seuil})$ \\
+\texttt{seed}          & entier optionnel              & Graine aléatoire (reproductibilité) \\
+\texttt{n\_bins}       & 10 (4 à 50)                   & Nombre de classes de l'histogramme \\
+\texttt{n\_extremes}   & 3 (0 à 20)                    & Nombre de scénarios extrêmes restitués \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Évaluation vectorisée}
+
+L'ensemble des $n+1$ scénarios est évalué en \emph{un seul passage vectorisé}~: une unique
+transformation par le préprocesseur suivie d'un unique appel à \texttt{predict\_proba} sur tout
+le lot. Ce choix d'implémentation rend le moteur capable de traiter des milliers de scénarios
+en une fraction du temps qu'exigerait une boucle dossier par dossier. La PD de la ligne~0 sert
+de référence~; les PD des lignes suivantes forment l'échantillon simulé. Le listing~\ref{lst:mc}
+résume le c\oe ur de l'algorithme.
+
+\begin{codeblock}
+\begin{lstlisting}[caption={Cœur du moteur Monte Carlo (extrait)}, label={lst:mc},
+                   language=Python]
+# 1) tirage des facteurs de choc (loi normale ou uniforme)
+if distribution == "normal":
+    factors = rng.normal(1.0, shock.pct, n)
+else:
+    factors = rng.uniform(1.0 - shock.pct, 1.0 + shock.pct, n)
+values = base[shock.field] * factors
+values = np.clip(values, 0.0, None)          # grandeurs positives
+
+# 2) re-derivation des ratios, puis evaluation VECTORISEE (un seul appel)
+frame       = apply_feature_engineering(frame)
+transformed = preprocessor.transform(frame[allowed_columns])
+pd_all      = model.predict_proba(transformed)[:, 1]
+
+# 3) indicateurs de queue
+var_95 = np.percentile(sims, 95)
+es_95  = sims[sims >= var_95].mean()          # Expected Shortfall
+\end{lstlisting}
+\end{codeblock}
+
+\subsection{Validation des chocs et cohérence}
+
+Le moteur applique plusieurs garde-fous garantissant des scénarios exploitables. Seuls les chocs
+portant sur une variable \emph{numérique effectivement présente} dans le dossier sont retenus~;
+les champs non numériques ou absents sont ignorés et signalés dans le champ \texttt{notes} de la
+réponse, sans interrompre la simulation. Si aucun choc n'est actif, toutes les simulations
+coïncident avec le dossier de base, ce qui est explicitement indiqué. La graine aléatoire
+(\texttt{seed}) rend chaque simulation exactement reproductible, condition indispensable à
+l'auditabilité d'un test de stress. Enfin, la ré-application de l'ingénierie de variables après
+les chocs assure que les ratios dérivés restent cohérents avec les grandeurs perturbées, évitant
+des scénarios financièrement contradictoires.
+
+\subsection{Indicateurs de risque dérivés}
+
+De la distribution des PD simulées, le moteur dérive une batterie d'indicateurs
+(tableau~\ref{tab:mc_indicateurs}) synthétisant la tendance centrale, la dispersion et surtout
+le risque de queue.
+
+\begin{table}[H]
+\centering
+\caption{Indicateurs de risque produits par le moteur Monte Carlo}
+\label{tab:mc_indicateurs}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l Y@{}}
+\toprule
+\textbf{Indicateur} & \textbf{Définition} \\
+\midrule
+PD moyenne, écart-type & Tendance centrale et dispersion de la PD sous stress \\
+Percentiles (p5 \dots p95) & Forme de la distribution simulée \\
+VaR 95\,\% & Percentile 95 de la PD (perte de crédit à 95\,\% de confiance) \\
+Expected Shortfall 95\,\% & PD moyenne au-delà de la VaR (sévérité de la queue) \\
+$P(\text{PD} \geq \text{seuil})$ & Probabilité de franchir le seuil de décision sous stress \\
+Répartition \textit{low/medium/high} & Mix de classes de risque parmi les scénarios \\
+Scénarios extrêmes & Dossiers les plus/moins risqués et leurs chocs appliqués \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent
+La \textbf{VaR à 95\,\%} correspond au 95\up{e} percentile de la distribution des PD~: dans
+95\,\% des scénarios, la PD reste en deçà de cette valeur. L'\textbf{Expected Shortfall} (ou
+\textit{CVaR}) est la moyenne des PD au-delà de la VaR~; elle mesure la sévérité \emph{dans} la
+queue, information que la VaR seule ne capture pas. Le moteur restitue également un histogramme
+de la distribution et les scénarios extrêmes (les plus et les moins risqués), assortis des
+valeurs choquées qui les ont produits, ce qui permet à l'analyste d'identifier les combinaisons
+de chocs les plus pénalisantes.
+
+\subsection{Analyse de la distribution et robustesse}
+
+La figure~\ref{fig:mc_distribution} illustre une distribution de PD simulée~: le déplacement de
+sa masse et l'épaisseur de sa queue droite, comparés à la PD de référence, renseignent
+directement sur la robustesse du dossier face aux chocs. Une queue droite épaisse — VaR et
+Expected Shortfall nettement supérieures à la PD de référence — signale un dossier fragile,
+dont le risque se dégrade fortement sous stress~; à l'inverse, une distribution resserrée
+autour de la référence traduit une bonne résilience.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{monte_carlo_distribution}
+  \caption{Distribution des PD simulées sous chocs (VaR et Expected Shortfall à 95\,\%)}
+  \label{fig:mc_distribution}
+\end{figure}
+
+\subsection{Exemple de lecture pour l'analyste}
+
+Concrètement, l'analyste applique par exemple un choc de $-20\,\%$ sur le chiffre d'affaires et
+de $+15\,\%$ sur les impayés d'un dossier, puis lit la réponse du moteur. Une PD de référence de
+$0{,}30$ qui se déplace vers une PD moyenne de $0{,}42$, avec une VaR à 95\,\% de $0{,}68$ et une
+Expected Shortfall de $0{,}77$, indique un dossier dont le risque, initialement modéré, bascule
+en zone élevée dans les scénarios adverses~: la probabilité de franchir le seuil de décision
+($P(\text{PD}\geq 0{,}5)$) devient substantielle, et la répartition par classe de risque montre
+une migration nette vers la classe \textit{high}. Les scénarios extrêmes restitués — avec les
+valeurs choquées qui les ont produits — permettent d'identifier précisément la combinaison de
+chocs la plus pénalisante. Cette lecture transforme une décision binaire en une appréciation
+nuancée de la \emph{robustesse} du dossier, directement exploitable en comité de crédit.
+
+\subsection{Intégration à la plateforme}
+
+Le moteur s'inscrit dans la même architecture que le reste de la plateforme~: il réutilise
+l'artefact déployé (préprocesseur + modèle) chargé et mis en cache au démarrage, expose ses
+résultats via des schémas Pydantic typés (\texttt{MonteCarloResponse}), et peut être invoqué
+depuis le tableau de bord. Ses sorties — synthèse d'indicateurs, histogramme et scénarios
+extrêmes — sont, comme les autres sorties calculées, susceptibles d'être mises en récit par
+la couche LLM sous la même règle de séparation stricte des rôles~: aucune valeur numérique
+n'est produite par le modèle de langage.
+
+\section*{Conclusion}
+
+Cette release finalise la plateforme en dotant les analystes d'un moteur de tests de stress
+capable de mesurer la robustesse d'un dossier PME face à des chocs macro-économiques et
+sectoriels. En réutilisant le modèle déployé de façon vectorisée, il reconstitue la distribution
+complète de la PD sous stress et en extrait des indicateurs de risque extrême (VaR, Expected
+Shortfall, probabilité de dépassement du seuil), offrant une lecture du risque bien plus riche
+qu'une prédiction ponctuelle. Au-delà de la valeur métier, ce moteur illustre une dernière fois
+les principes d'ingénierie qui structurent toute la plateforme~: réutilisation stricte de
+l'artefact déployé pour garantir la cohérence avec la prédiction nominale, vectorisation pour la
+performance, validation défensive des entrées, et reproductibilité par graine fixe au service de
+l'auditabilité.
+
+% ════════════════════════════════════════════════════════════
+%  CONCLUSION GÉNÉRALE
+% ════════════════════════════════════════════════════════════
+\chapterunnumbered{Conclusion générale}
+
+Ce projet de fin d'études, réalisé au sein de MPSoft, a conduit la conception et le
+développement complets d'une plateforme d'aide à la décision pour le risque de crédit des PME,
+articulée autour d'un principe directeur~: allier la puissance prédictive de l'apprentissage
+automatique à une explicabilité et une traçabilité de niveau réglementaire, sans jamais
+dessaisir l'analyste de la décision finale.
+
+La démarche s'est déroulée en quatre \emph{releases} cohérentes. La première a établi la
+compréhension métier du crédit PME et constitué un socle de données synthétique robuste,
+piloté par un facteur de risque latent et enrichi de plus de quatre-vingt-dix variables
+métier-cohérentes. La deuxième a construit le c\oe ur prédictif~: une chaîne de prétraitement
+reproductible, une ingénierie de variables discriminantes, la comparaison de deux familles de
+modèles ensemblistes (Random Forest et XGBoost) sur trois périmètres de variables (options~A,
+B et~C), et le déploiement d'un XGBoost hybride (option~C) doté d'une couche d'explicabilité
+SHAP globale et locale. La troisième a industrialisé ce modèle au sein d'un agent IA
+orchestrateur, sous séparation stricte des rôles avec un LLM local chargé de la seule mise en
+récit des résultats. La quatrième, enfin, a ajouté un moteur de tests de stress Monte Carlo
+reconstituant la distribution de la PD sous chocs et ses indicateurs de risque extrême.
+
+La solution livrée répond directement aux limites identifiées des processus d'instruction
+existants~: elle réduit un traitement expert de plusieurs jours à une analyse automatisée de
+quelques minutes, tout en préservant — et c'est là sa valeur distinctive — l'explicabilité de
+chaque décision. Chaque prédiction est décomposable en contributions de variables, chaque
+résultat est traçable et rattaché à une version de modèle, et l'architecture garantit qu'aucune
+valeur numérique n'est produite par le LLM. La plateforme autonomise ainsi les analystes sans
+automatiser le jugement du comité de crédit.
+
+\medskip
+\noindent\textbf{Apports techniques.} Au-delà des fonctionnalités, le projet a mis en \oe uvre
+un ensemble de principes d'ingénierie qui font sa robustesse. La séparation stricte entre la
+couche HTTP (\textit{routers}) et la logique métier (\textit{services}) rend chaque brique
+réutilisable~: un même service de prédiction alimente à la fois la prédiction directe, la
+simulation de scénarios, l'orchestration et le moteur de stress. La sérialisation conjointe du
+préprocesseur et du modèle dans un artefact unique garantit une inférence strictement alignée
+sur l'entraînement. Enfin, la conception défensive — validation non bloquante des entrées,
+capture des pannes du LLM sans perte des résultats calculés, reproductibilité par graine fixe —
+assure que la valeur métier est toujours délivrée et toujours auditable.
+
+\medskip
+\noindent\textbf{Limites.} Le principal facteur à relativiser tient à la nature
+\emph{synthétique} du jeu de données~: la cible étant dérivée d'un score latent réutilisant des
+signaux d'entrée, les performances observées (AUC $\approx$ 0{,}89) valident la cohérence
+technique du pipeline mais ne préjugent pas d'un niveau de performance réaliste sur données
+réelles. L'injection de réalisme (bruit, atténuation des variables dominantes, découpage
+temporel) ramène d'ailleurs l'AUC à des niveaux plus crédibles ($\approx$ 0{,}80–0{,}82), ce qui
+confirme que le score élevé initial reflétait surtout la cohérence interne du générateur. Par
+ailleurs, les hyperparamètres ont été fixés à des valeurs éprouvées plutôt que recherchés
+exhaustivement, et l'évaluation repose sur une partition \textit{train}/\textit{test} unique
+plutôt que sur une validation croisée complète.
+
+\medskip
+\noindent\textbf{Perspectives.} Plusieurs prolongements se dégagent naturellement. Le plus
+structurant est la \emph{migration vers les données réelles} de la banque~: ré-entraînement et
+validation externe du pipeline sur les dossiers réels, calibration des probabilités et suivi de
+la dérive du modèle dans le temps. La récupération des variables réellement prédictives présentes
+dans le système d'information — sous-facteurs de notation, ratios financiers détaillés, historique
+de paiement — conditionne la valeur d'un futur modèle déployable. À cela s'ajoutent une recherche
+systématique d'hyperparamètres et une validation croisée temporelle, l'intégration de la PD dans
+le calcul réglementaire des provisions pour risque de crédit, l'audit d'équité et de robustesse
+des décisions, et enfin l'industrialisation (déploiement conteneurisé, supervision, montée à
+l'échelle du portefeuille) et l'extension à d'autres segments ou clients de MPSoft.
+
+% ════════════════════════════════════════════════════════════
+%  WEBOGRAPHIE & BIBLIOGRAPHIE
+% ════════════════════════════════════════════════════════════
+\begin{thebibliography}{99}
+\addcontentsline{toc}{chapter}{Webographie \& Bibliographie}
+
+% ── Risque de crédit et scoring ──
+\bibitem{altman1968} E.~I. Altman, ``Financial Ratios, Discriminant Analysis and the
+  Prediction of Corporate Bankruptcy'', \emph{The Journal of Finance}, vol.~23, n\up{o}~4,
+  p.~589--609, 1968.
+
+\bibitem{thomas2002} L.~C. Thomas, D.~B. Edelman et J.~N. Crook, \emph{Credit Scoring and
+  Its Applications}, Society for Industrial and Applied Mathematics (SIAM), Philadelphie, 2002.
+
+\bibitem{hosmer2013} D.~W. Hosmer, S.~Lemeshow et R.~X. Sturdivant, \emph{Applied Logistic
+  Regression}, 3\up{e} éd., Wiley, 2013.
+
+\bibitem{lessmann2015} S.~Lessmann, B.~Baesens, H.-V. Seow et L.~C. Thomas, ``Benchmarking
+  State-of-the-Art Classification Algorithms for Credit Scoring: An Update of Research'',
+  \emph{European Journal of Operational Research}, vol.~247, n\up{o}~1, p.~124--136, 2015.
+
+% ── Apprentissage automatique ──
+\bibitem{breiman2001} L.~Breiman, ``Random Forests'', \emph{Machine Learning}, vol.~45,
+  n\up{o}~1, p.~5--32, 2001.
+
+\bibitem{friedman2001} J.~H. Friedman, ``Greedy Function Approximation: A Gradient Boosting
+  Machine'', \emph{The Annals of Statistics}, vol.~29, n\up{o}~5, p.~1189--1232, 2001.
+
+\bibitem{chen2016} T.~Chen et C.~Guestrin, ``XGBoost: A Scalable Tree Boosting System'',
+  \emph{Proc. 22nd ACM SIGKDD Int. Conf. on Knowledge Discovery and Data Mining},
+  p.~785--794, 2016.
+
+\bibitem{pedregosa2011} F.~Pedregosa \textit{et al.}, ``Scikit-learn: Machine Learning in
+  Python'', \emph{Journal of Machine Learning Research}, vol.~12, p.~2825--2830, 2011.
+
+% ── Explicabilité (XAI) ──
+\bibitem{lundberg2017} S.~M. Lundberg et S.-I. Lee, ``A Unified Approach to Interpreting Model
+  Predictions'', \emph{Advances in Neural Information Processing Systems (NeurIPS)}, vol.~30,
+  p.~4765--4774, 2017.
+
+\bibitem{ribeiro2016} M.~T. Ribeiro, S.~Singh et C.~Guestrin, ``\,`Why Should I Trust You?':
+  Explaining the Predictions of Any Classifier'', \emph{Proc. 22nd ACM SIGKDD Int. Conf. on
+  Knowledge Discovery and Data Mining}, p.~1135--1144, 2016.
+
+\bibitem{molnar2022} C.~Molnar, \emph{Interpretable Machine Learning: A Guide for Making Black
+  Box Models Explainable}, 2\up{e} éd., 2022. \url{https://christophm.github.io/interpretable-ml-book/}
+
+% ── Agents IA et grands modèles de langage ──
+\bibitem{vaswani2017} A.~Vaswani \textit{et al.}, ``Attention Is All You Need'',
+  \emph{Advances in Neural Information Processing Systems (NeurIPS)}, vol.~30, 2017.
+
+\bibitem{brown2020} T.~B. Brown \textit{et al.}, ``Language Models Are Few-Shot Learners'',
+  \emph{Advances in Neural Information Processing Systems (NeurIPS)}, vol.~33, p.~1877--1901, 2020.
+
+\bibitem{wu2023bloomberggpt} S.~Wu \textit{et al.}, ``BloombergGPT: A Large Language Model for
+  Finance'', \emph{arXiv preprint} arXiv:2303.17564, 2023.
+
+% ── Tests de stress et Monte Carlo ──
+\bibitem{glasserman2004} P.~Glasserman, \emph{Monte Carlo Methods in Financial Engineering},
+  Springer, 2004.
+
+\bibitem{bcbs2018} Basel Committee on Banking Supervision, \emph{Stress Testing Principles},
+  Bank for International Settlements, 2018. \url{https://www.bis.org/bcbs/publ/d450.htm}
+
+\bibitem{metropolis1949} N.~Metropolis et S.~Ulam, ``The Monte Carlo Method'', \emph{Journal
+  of the American Statistical Association}, vol.~44, n\up{o}~247, p.~335--341, 1949.
+
+% ── Outils et frameworks (webographie) ──
+\bibitem{fastapi} S.~Ramírez, \emph{FastAPI --- Documentation officielle}, 2024.
+  \url{https://fastapi.tiangolo.com/} (consulté le 01/05/2025).
+
+\bibitem{pydantic} Pydantic, \emph{Pydantic --- Data Validation Using Python Type Hints}, 2024.
+  \url{https://docs.pydantic.dev/} (consulté le 01/05/2025).
+
+\bibitem{shapdoc} S.~M. Lundberg, \emph{SHAP --- SHapley Additive exPlanations, Documentation},
+  2024. \url{https://shap.readthedocs.io/} (consulté le 01/05/2025).
+
+\bibitem{xgboostdoc} XGBoost Developers, \emph{XGBoost Documentation}, 2024.
+  \url{https://xgboost.readthedocs.io/} (consulté le 01/05/2025).
+
+\bibitem{ollama} Ollama, \emph{Ollama --- Run Large Language Models Locally}, 2024.
+  \url{https://ollama.com/} (consulté le 01/05/2025).
+
+\end{thebibliography}
+
+% ════════════════════════════════════════════════════════════
+%  RÉSUMÉ ET ABSTRACT (à la fin du rapport)
+% ════════════════════════════════════════════════════════════
+\chapterunnumbered{Résumé}
+
+Ce projet de fin d'études, réalisé au sein de MPSoft, vise à concevoir une
+plateforme d'aide à la décision pour le risque de crédit des PME, basée sur un agent
+d'intelligence artificielle explicable. La solution compare des modèles ensemblistes
+(Random Forest et XGBoost) sur trois périmètres de variables et déploie un XGBoost hybride
+pour estimer la probabilité de défaut, une couche d'explicabilité fondée sur SHAP, un agent
+orchestrateur doté d'un module de raisonnement en langage naturel par LLM local, et des tests
+de stress par simulation Monte Carlo. L'ensemble garantit l'auditabilité, la traçabilité et la
+supervision humaine des décisions de crédit.
+
+\bigskip
+\noindent\textbf{Mots-clés :} Risque de crédit, Intelligence Artificielle, Explainable
+AI, SHAP, Probabilité de Défaut, Agent IA, LLM, Monte Carlo, Scoring bancaire.
+
+\chapterunnumbered{Abstract}
+
+% [Abstract in English to write]
+This graduation project, carried out at MPSoft, aims to design a decision-support
+platform for SME credit risk based on an explainable AI agent. The solution compares
+ensemble models (Random Forest and XGBoost) over three feature sets and deploys a hybrid
+XGBoost model to estimate the probability of default, an explainability layer based on SHAP,
+an orchestrating agent with a natural-language reasoning module powered by a local LLM, and
+stress testing via Monte Carlo simulation. The platform ensures auditability, traceability, and
+human-in-the-loop supervision of credit decisions.
+
+\bigskip
+\noindent\textbf{Keywords:} Credit Risk, Artificial Intelligence, Explainable AI,
+SHAP, Probability of Default, AI Agent, LLM, Monte Carlo, Banking Scorecard.
+
+% ════════════════════════════════════════════════════════════
+%  TABLE DES FIGURES ET LISTE DES TABLEAUX (à la fin)
+% ════════════════════════════════════════════════════════════
+\clearpage
+\renewcommand{\listfigurename}{TABLE DES FIGURES}
+\listoffigures
+
+\clearpage
+\renewcommand{\listtablename}{LISTE DES TABLEAUX}
+\listoftables
+
+\end{document}

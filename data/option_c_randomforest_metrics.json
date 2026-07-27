@@ -1,0 +1,28 @@
+{
+  "model_version": "option_c_rf_final_dataset_v2",
+  "data_source": "final_dataset.csv",
+  "accuracy": 0.8555,
+  "precision": 0.8705985915492958,
+  "recall": 0.874447391688771,
+  "f1": 0.8725187472430525,
+  "auc": 0.89118665417225,
+  "n_train": 8000,
+  "n_test": 2000,
+  "n_features_raw": 52,
+  "n_features_processed": 80,
+  "allowed_columns_sample": [
+    "code_modele",
+    "risk_class",
+    "score_bfpme_global",
+    "bfpme_risk_index",
+    "anciennete_entreprise",
+    "secteur_activite",
+    "region_localisation",
+    "structure_juridique",
+    "nombre_employes",
+    "classification_pme",
+    "capital_social",
+    "chiffre_affaires_annuel"
+  ],
+  "allowed_columns_count": 52
+}

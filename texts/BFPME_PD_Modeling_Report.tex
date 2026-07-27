@@ -1,0 +1,485 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\geometry{margin=2.5cm}
+
+\title{Rapport Technique -- Projet PD Classification (BFPME)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\renewcommand{\contentsname}{Sommaire}
+\setcounter{tocdepth}{2}
+\tableofcontents
+\newpage
+
+\section{Contexte et objectif du projet}
+
+Ce projet vise a construire une base de travail pour la prediction du risque de defaut (PD) dans un cadre de modernisation progressive du scoring BFPME.
+
+L'approche retenue est prudente:
+\begin{itemize}[leftmargin=1.2cm]
+  \item conserver la logique metier existante BFPME comme reference,
+  \item creer un dataset centralise enrichi,
+  \item tester des modeles de classification ML (RandomForest, XGBoost),
+  \item comparer plusieurs strategies d'integration du signal BFPME.
+\end{itemize}
+
+Le but n'est pas de remplacer immediatement le scorecard historique, mais de demontrer une valeur ajoutee methodologique dans un cadre champion/challenger.
+
+\section{Creation de \texttt{data/dataset\_final.csv}}
+
+\subsection{Source de depart}
+
+Le fichier \texttt{data/dataset\_final.csv} a ete construit a partir de:
+\begin{itemize}[leftmargin=1.2cm]
+  \item \texttt{data/bfpme\_synthetic\_dataset.csv} (base initiale contenant sous-facteurs BFPME, score et classes de risque),
+  \item script de generation: \texttt{scripts/generate\_dataset\_final.py}.
+\end{itemize}
+
+La base finale contient:
+\begin{itemize}[leftmargin=1.2cm]
+  \item les variables d'origine BFPME (sous-facteurs + scores),
+  \item des variables synthetiques additionnelles (business, credit, finance, garanties, comportement bancaire, macro),
+  \item des ratios derives,
+  \item une cible de classification binaire: \texttt{default\_flag}.
+\end{itemize}
+
+\subsection{Structure du dataset final}
+
+Le dataset final est centralise ("wide table"):
+\begin{itemize}[leftmargin=1.2cm]
+  \item 1 ligne = 1 dossier client,
+  \item 1 colonne = 1 variable explicative ou cible.
+\end{itemize}
+
+Il contient notamment:
+\begin{itemize}[leftmargin=1.2cm]
+  \item identifiants et metadonnees (\texttt{dossier\_id}, \texttt{code\_modele}),
+  \item variables BFPME (\texttt{score\_bfpme\_*}, \texttt{risk\_class}, \texttt{SF\_*}),
+  \item variables metier enrichies (juridique, taille, gouvernance, localisation, credit),
+  \item variables financieres (structure bilan, rentabilite, liquidite, cashflow),
+  \item variables comportementales et relation bancaire (DPD, impayes, discipline),
+  \item variables macroeconomiques (\texttt{scenario\_macro}, inflation, PIB, etc.),
+  \item cible: \texttt{default\_flag} (0/1) + variable intermediaire \texttt{pd\_target}.
+\end{itemize}
+
+\section{Logique de generation metier et formule latente de la cible}
+
+\subsection{Principe general}
+
+Le dataset a ete genere avec une logique de coherence metier, et non par tirage totalement aleatoire.
+
+Une variable cachee est introduite:
+\begin{itemize}[leftmargin=1.2cm]
+  \item \texttt{latent\_risk} (niveau de risque latent),
+  \item \texttt{latent\_quality = 1 - latent\_risk}.
+\end{itemize}
+
+Cette variable gouverne ensuite de nombreuses distributions:
+\begin{itemize}[leftmargin=1.2cm]
+  \item profils solides $\rightarrow$ meilleure liquidite, meilleure gouvernance, meilleur comportement de paiement,
+  \item profils fragiles $\rightarrow$ endettement plus eleve, DPD plus fort, stress bancaire plus marque.
+\end{itemize}
+
+\subsection{Construction du risque latent}
+
+Le risque latent est calcule a partir de:
+\begin{itemize}[leftmargin=1.2cm]
+  \item score BFPME global normalise,
+  \item index de risque derive de la classe BFPME (\texttt{bfpme\_risk\_index}),
+  \item type de modele (\texttt{code\_modele}),
+  \item bruit gaussien modere.
+\end{itemize}
+
+Forme simplifiee:
+\begin{quote}
+\texttt{latent\_risk ~= 0.55 * base\_risk + 0.35 * bfpme\_risk\_index + 0.10 * I(code\_modele=1) + bruit}
+\end{quote}
+
+avec:
+\begin{itemize}[leftmargin=1.2cm]
+  \item \texttt{base\_risk = 1 - score\_bfpme\_global / 200}.
+\end{itemize}
+
+\subsection{Generation de \texttt{pd\_target}}
+
+La probabilite de defaut intermediaire est obtenue via un score latent de defaut, combine avec une fonction logistique (sigmoid).
+
+Le score latent de defaut agrege:
+
+\textbf{Effets qui augmentent le risque}:
+\begin{itemize}[leftmargin=1.2cm]
+  \item faible score BFPME,
+  \item DPD moyen eleve,
+  \item leverage eleve (\texttt{debt\_to\_equity\_ratio}),
+  \item faible capacite de service de la dette (\texttt{dscr} faible),
+  \item conditions macro defavorables,
+  \item comportements de stress (augmentation dettes, baisse depots, etc.).
+\end{itemize}
+
+\textbf{Effets qui reduisent le risque}:
+\begin{itemize}[leftmargin=1.2cm]
+  \item meilleure liquidite (\texttt{ratio\_liquidite\_generale}),
+  \item meilleure couverture de garanties (\texttt{garantie\_coverage\_ratio}),
+  \item meilleur taux de remboursement ponctuel,
+  \item meilleure confiance institutionnelle.
+\end{itemize}
+
+Forme simplifiee:
+\begin{quote}
+\texttt{pd\_target = sigmoid(score\_latent\_default)}
+\end{quote}
+
+\subsection{Construction de la cible binaire \texttt{default\_flag}}
+
+La cible finale de classification est un tirage Bernoulli:
+\begin{quote}
+\texttt{default\_flag ~ Bernoulli(pd\_target)}
+\end{quote}
+
+Donc:
+\begin{itemize}[leftmargin=1.2cm]
+  \item \texttt{default\_flag = 1}: defaut,
+  \item \texttt{default\_flag = 0}: non-defaut.
+\end{itemize}
+
+Cette approche permet de transformer une logique de probabilite en probleme supervise binaire.
+
+\section{Data preprocessing \& feature engineering}
+
+Notebook de reference:
+\begin{itemize}[leftmargin=1.2cm]
+  \item \texttt{notebook/data\_preprocessing\_feature\_engineering.ipynb}
+\end{itemize}
+
+\subsection{Etapes de preprocessing appliquees}
+
+\begin{enumerate}[leftmargin=1.2cm, label=\arabic*., widest=9]
+  \item Chargement et controles initiaux:
+  \begin{itemize}
+    \item dimensions du dataset,
+    \item types,
+    \item taux de valeurs manquantes,
+    \item distribution de la cible.
+  \end{itemize}
+
+  \item Controle de fuite d'information:
+  \begin{itemize}
+    \item suppression de \texttt{pd\_target} (utilisee pour generer la cible),
+    \item suppression de l'identifiant \texttt{dossier\_id}.
+  \end{itemize}
+
+  \item Analyse exploratoire ciblee:
+  \begin{itemize}
+    \item visualisation de \texttt{default\_flag},
+    \item distributions/boxplots de variables cle (score BFPME, DPD, liquidite, garanties, leverage, DSCR).
+  \end{itemize}
+
+  \item Detection des outliers:
+  \begin{itemize}
+    \item methode IQR sur variables cle.
+  \end{itemize}
+
+  \item Winsorization ciblee:
+  \begin{itemize}
+    \item clipping quantiles (1\% / 99\%) sur variables financieres extremes.
+  \end{itemize}
+
+  \item Encodage categoriel controle:
+  \begin{itemize}
+    \item \texttt{OrdinalEncoder} pour categories ordonnees,
+    \item \texttt{OneHotEncoder} limite aux variables nominales necessaires.
+  \end{itemize}
+
+  \item Standardisation:
+  \begin{itemize}
+    \item \texttt{StandardScaler} sur variables numeriques.
+  \end{itemize}
+
+  \item Split train/test:
+  \begin{itemize}
+    \item split stratifie (80/20) sur \texttt{default\_flag}.
+  \end{itemize}
+
+  \item Export:
+  \begin{itemize}
+    \item jeux preprocesses (\texttt{X\_train\_preprocessed}, \texttt{X\_test\_preprocessed}, \texttt{y\_train}, \texttt{y\_test}).
+  \end{itemize}
+\end{enumerate}
+
+\subsection{Feature engineering metier ajoute}
+
+Variables composites principales:
+\begin{itemize}[leftmargin=1.2cm]
+  \item \texttt{debt\_total = dettes\_court\_terme + dettes\_long\_terme},
+  \item \texttt{loan\_to\_revenue = montant\_pret / chiffre\_affaires\_annuel},
+  \item \texttt{cash\_to\_debt = cash\_equivalents / debt\_total},
+  \item \texttt{impayes\_to\_loan = montant\_impayes / montant\_pret},
+  \item \texttt{stress\_behavior\_index} (somme de signaux de stress bancaire),
+  \item \texttt{governance\_risk\_index} (experience + turnover + structure dirigeante).
+\end{itemize}
+
+Ces variables visent a mieux capter:
+\begin{itemize}[leftmargin=1.2cm]
+  \item pression de dette,
+  \item fragilite de tresorerie,
+  \item stress comportemental,
+  \item risque de gouvernance.
+\end{itemize}
+
+\subsection{Realisme de la cible synthetique et flux \texttt{dataset\_final\_realism\_v2.csv}}
+
+En complement des etapes ci-dessus, le notebook \texttt{notebook/data\_preprocessing\_feature\_engineering.ipynb} inclut une section intitulee \emph{Making the synthetic target more realistic} (en debut de cette partie du notebook, les objectifs sont resumes en quatre points: stochasticite accrue, reduction du poids des predicteurs dominants, contradictions realistes, split temporel).
+
+Concretement, ce bloc du notebook:
+\begin{enumerate}[leftmargin=1.2cm, label=\arabic*., widest=4]
+  \item augmente le bruit dans la generation de la cible pour reduire le caractere quasi-deterministe de la premiere version;
+  \item diminue la dominance relative de variables telles que \texttt{score\_bfpme\_global} et le DPD en repartissant le signal sur d'autres dimensions (macro, levier, DSCR, stress, protections);
+  \item introduit des cas contradictoires (bons dossiers en defaut, dossiers risques qui tiennent);
+  \item remplace le split aleatoire par un decoupage temporel (historique d'apprentissage, periode de test plus recente).
+\end{enumerate}
+
+Le resultat est exporte sous \texttt{data/dataset\_final\_realism\_v2.csv}, avec une cible de modelisation \texttt{default\_flag\_v2} et une probabilite intermediaire \texttt{pd\_target\_v2}. Les notebooks de classification (options A, B et C) utilisent ce meme jeu et la meme logique d'entree (chargement de \texttt{dataset\_final\_realism\_v2.csv}, cible \texttt{default\_flag\_v2}, et reprise des exports temporels \texttt{X\_train\_temporal\_v2} / \texttt{X\_test\_temporal\_v2} lorsque applicable) afin d'observer des metriques plus credibles que sur la premiere generation synthetique.
+
+\section{Strategie de modelisation: 3 options comparees}
+
+Trois notebooks de classification ont ete crees:
+\begin{itemize}[leftmargin=1.2cm]
+  \item \texttt{notebook/classification\_option\_A\_all\_features.ipynb}
+  \item \texttt{notebook/classification\_option\_B\_without\_bfpme.ipynb}
+  \item \texttt{notebook/classification\_option\_C\_hybrid\_min\_bfpme.ipynb}
+\end{itemize}
+
+Chaque notebook entraine:
+\begin{itemize}[leftmargin=1.2cm]
+  \item \texttt{RandomForestClassifier}
+  \item \texttt{XGBoost} (ou fallback GradientBoosting si xgboost indisponible)
+\end{itemize}
+
+\subsection{Option A -- All Features}
+\textbf{Objectif}
+\begin{itemize}[leftmargin=1.2cm]
+  \item mesurer la performance maximale avec toutes les variables utiles.
+\end{itemize}
+\textbf{Contenu}
+\begin{itemize}[leftmargin=1.2cm]
+  \item variables enrichies + signaux BFPME complets (scores et classe).
+\end{itemize}
+\textbf{Lecture metier}
+\begin{itemize}[leftmargin=1.2cm]
+  \item benchmark "upper bound" de performance.
+\end{itemize}
+
+\subsection{Option B -- Without BFPME Score Family}
+\textbf{Objectif}
+\begin{itemize}[leftmargin=1.2cm]
+  \item evaluer la capacite predictive d'un modele plus "data-driven", moins dependant du score historique.
+\end{itemize}
+\textbf{Contenu}
+\begin{itemize}[leftmargin=1.2cm]
+  \item retrait des variables de score BFPME et classes associees.
+\end{itemize}
+\textbf{Lecture metier}
+\begin{itemize}[leftmargin=1.2cm]
+  \item mesure de la valeur predictive des nouvelles variables hors scorecard legacy.
+\end{itemize}
+
+\subsection{Option C -- Hybrid Minimal BFPME}
+\textbf{Objectif}
+\begin{itemize}[leftmargin=1.2cm]
+  \item tester une approche hybride parcimonieuse.
+\end{itemize}
+\textbf{Contenu}
+\begin{itemize}[leftmargin=1.2cm]
+  \item conservation d'un seul signal BFPME (\texttt{score\_bfpme\_global}), retrait du reste de la famille score detaillee.
+\end{itemize}
+\textbf{Lecture metier}
+\begin{itemize}[leftmargin=1.2cm]
+  \item compromis entre explicabilite metier historique et signal data-driven.
+\end{itemize}
+
+\section{Resultats observes et interpretation}
+
+Deux regimes d'evaluation ont ete utilises.
+
+\subsection{Premiere generation (\texttt{dataset\_final.csv}, cible \texttt{default\_flag})}
+
+Les metriques etaient tres elevees (accuracy/F1/AUC souvent autour de 0.96--0.99) sur les trois options, avec des ecarts modestes entre RandomForest et XGBoost.
+
+\subsection{Generation realiste (\texttt{dataset\_final\_realism\_v2.csv}, cible \texttt{default\_flag\_v2})}
+
+Apres application des quatre leviers de realisme (section~4.3) et evaluation sur \textbf{split temporel} (exports \texttt{X\_train\_temporal\_v2}, \texttt{X\_test\_temporal\_v2}, \texttt{y\_*\_temporal\_v2}), les metriques se situent dans une fourchette \textbf{plus credible pour un cas d'usage risque} qu'une PD synthetique quasi parfaite.
+
+\paragraph{1) Pourquoi les scores etaient trop eleves avant.}
+Dans la premiere version synthetique, la cible etait fortement liee a quelques predicteurs dominants (\texttt{score\_bfpme\_global}, variables de comportement type DPD), avec peu de bruit et un split aleatoire train/test tres proche en distribution. Les modeles pouvaient alors retrouver presque directement la logique de generation, d'ou des AUC proches de~1 (sur-ajustement au generateur plutot qu'une generalisation realiste).
+
+\paragraph{2) Ce qui a change en v2 et impact attendu.}
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{Stochasticite accrue}: ajout d'une composante aleatoire plus forte dans la cible, ce qui augmente l'incertitude irreductible.
+  \item \textbf{Moindre dominance des predicteurs top}: reduction du poids relatif de \texttt{score\_bfpme\_global} et du DPD, avec redistribution du signal vers macro, levier, DSCR, stress et protections.
+  \item \textbf{Contradictions realistes}: injection de cas contre-intuitifs (bons dossiers qui defautent, dossiers risques qui tiennent).
+  \item \textbf{Split temporel}: train sur dossiers plus anciens, test sur dossiers plus recents (derive de distribution plus proche du deploiement).
+\end{itemize}
+
+Ces quatre ajustements cassent les raccourcis deterministes et rendent l'evaluation plus exigeante.
+
+\paragraph{3) Metriques observees (RandomForest et XGBoost, jeu v2 + split temporel).}
+Les tableaux suivants reprennent les sorties des notebooks d'options A, B et~C sur le meme protocole (\texttt{dataset\_final\_realism\_v2.csv}, exports temporels). Les resultats \textbf{different entre A et B}: l'option~A conserve toute la famille score BFPME disponible, tandis que l'option~B l'exclut.
+
+\begin{table}[h]
+  \centering
+  \caption{Option A -- toutes les variables utiles (hors fuite), \texttt{dataset\_final\_realism\_v2.csv}, split temporel (sortie notebook).}
+  \begin{tabular}{lrrrrr}
+    \toprule
+    Modele & Accuracy & Precision & Recall & F1 & AUC \\
+    \midrule
+    RandomForest & 0.765 & 0.829060 & 0.782258 & 0.804979 & 0.819503 \\
+    XGBoost      & 0.745 & 0.782946 & 0.814516 & 0.798419 & 0.802101 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[h]
+  \centering
+  \caption{Option B -- sans variables de score BFPME (famille score retiree), meme jeu et split temporel que l'option~A (sortie notebook).}
+  \begin{tabular}{lrrrrr}
+    \toprule
+    Modele & Accuracy & Precision & Recall & F1 & AUC \\
+    \midrule
+    RandomForest & 0.765 & 0.829060 & 0.782258 & 0.804979 & 0.820458 \\
+    XGBoost      & 0.760 & 0.801587 & 0.814516 & 0.808000 & 0.793081 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[h]
+  \centering
+  \caption{Option C -- hybrid minimal (\texttt{score\_bfpme\_global} conserve, reste de la famille score retire), meme protocole.}
+  \begin{tabular}{lrrrrr}
+    \toprule
+    Modele & Accuracy & Precision & Recall & F1 & AUC \\
+    \midrule
+    RandomForest & 0.770 & 0.830508 & 0.790323 & 0.809917 & 0.820140 \\
+    XGBoost      & 0.785 & 0.813953 & 0.846774 & 0.830040 & 0.811969 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Les AUC autour de \textbf{0,79--0,82} et des scores F1 proches de \textbf{0,80--0,83} sont coherents avec une discrimination utile mais non ``parfaite''; ils sont preferables, pour la communication interne et la preparation champion/challenger, a des AUC $>$~0,95 issues d'une cible quasi rejouable.
+
+\paragraph{3.b) Comparaison de robustesse: 1000 vs 10000 clients (meme logique v2).}
+En augmentant la taille de la population synthetique (de 1000 a 10000 clients) tout en conservant la meme logique de generation et les memes colonnes, les metriques baissent de facon homogene et convergent vers un plateau plus strict.
+
+\begin{table}[h]
+  \centering
+  \caption{Resultats sur 10000 clients (dataset v3, split temporel, memes options A/B/C).}
+  \begin{tabular}{llrrrrr}
+    \toprule
+    Option & Modele & Accuracy & Precision & Recall & F1 & AUC \\
+    \midrule
+    A & RandomForest & 0.733600 & 0.783307 & 0.788368 & 0.785829 & 0.754300 \\
+    A & XGBoost      & 0.729594 & 0.780096 & 0.785137 & 0.782609 & 0.751140 \\
+    B & RandomForest & 0.735103 & 0.783373 & 0.791599 & 0.787465 & 0.753904 \\
+    B & XGBoost      & 0.729094 & 0.777689 & 0.788368 & 0.782992 & 0.752760 \\
+    C & RandomForest & 0.734602 & 0.783200 & 0.790792 & 0.786977 & 0.753921 \\
+    C & XGBoost      & 0.728593 & 0.781553 & 0.780291 & 0.780922 & 0.752605 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Lecture comparative avec les resultats ``1000 clients'' ci-dessus:
+\begin{itemize}[leftmargin=1.2cm]
+  \item l'AUC passe globalement d'une zone \textbf{0,79--0,82} vers \textbf{0,75--0,76} (baisse d'environ 4 a 7 points selon option/modele);
+  \item accuracy et F1 diminuent egalement (ordre de grandeur proche de 5 a 6 points), avec un comportement relativement stable entre A/B/C;
+  \item les ecarts inter-options deviennent faibles sur 10000 clients, ce qui suggere que la difficulte provient davantage de la cible realiste et du split temporel que d'un effet artificiel de petite taille d'echantillon;
+  \item ces niveaux restent coherents avec une discrimination utile dans un cadre risque plus exigeant, et renforcent le caractere defendable de l'approche avant passage aux donnees reelles.
+\end{itemize}
+
+\paragraph{4) Lecture metier pour presentation BFPME/client.}
+\begin{itemize}[leftmargin=1.2cm]
+  \item v1 a surtout valide la coherence technique du pipeline;
+  \item v2 valide une robustesse plus credible sous hypotheses realistes (bruit, contradictions, derive temporelle);
+  \item la performance reste solide apres stress de realisme, ce qui rend la methode plus defendable avant migration sur donnees reelles.
+\end{itemize}
+
+\paragraph{5) Etape pratique recommandee.}
+Utiliser par defaut les exports temporels v2 comme base commune de comparaison A/B/C:
+\begin{itemize}[leftmargin=1.2cm]
+  \item \texttt{data/X\_train\_temporal\_v2.csv},
+  \item \texttt{data/X\_test\_temporal\_v2.csv},
+  \item \texttt{data/y\_train\_temporal\_v2.csv},
+  \item \texttt{data/y\_test\_temporal\_v2.csv}.
+\end{itemize}
+
+\section{Livrables techniques existants}
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item Dataset final (generation initiale):
+  \begin{itemize}
+    \item \texttt{data/dataset\_final.csv}
+  \end{itemize}
+
+  \item Dataset synthetique realiste (cible \texttt{default\_flag\_v2}):
+  \begin{itemize}
+    \item \texttt{data/dataset\_final\_realism\_v2.csv}
+  \end{itemize}
+
+  \item Exports temporels et preprocesses (v2, selon le notebook):
+  \begin{itemize}
+    \item \texttt{data/X\_train\_temporal\_v2.csv}, \texttt{data/X\_test\_temporal\_v2.csv}
+    \item \texttt{data/y\_train\_temporal\_v2.csv}, \texttt{data/y\_test\_temporal\_v2.csv}
+    \item \texttt{data/X\_train\_preprocessed\_temporal\_v2.csv}, \texttt{data/X\_test\_preprocessed\_temporal\_v2.csv} (si generes par le flux ordonne du notebook)
+  \end{itemize}
+
+  \item Documentation variables:
+  \begin{itemize}
+    \item \texttt{dataset\_final\_variable\_dictionary.txt}
+  \end{itemize}
+
+  \item Generation du dataset:
+  \begin{itemize}
+    \item \texttt{scripts/generate\_dataset\_final.py}
+  \end{itemize}
+
+  \item Preprocessing \& feature engineering:
+  \begin{itemize}
+    \item \texttt{notebook/data\_preprocessing\_feature\_engineering.ipynb}
+  \end{itemize}
+
+  \item Classification (3 options):
+  \begin{itemize}
+    \item \texttt{notebook/classification\_option\_A\_all\_features.ipynb}
+    \item \texttt{notebook/classification\_option\_B\_without\_bfpme.ipynb}
+    \item \texttt{notebook/classification\_option\_C\_hybrid\_min\_bfpme.ipynb}
+  \end{itemize}
+\end{itemize}
+
+\section{Conclusion}
+
+Le projet fournit un cadre complet et presentable de modelisation PD en mode "proof of value":
+\begin{itemize}[leftmargin=1.2cm]
+  \item conception de donnees enrichies,
+  \item cible de classification binaire,
+  \item pipeline reproductible,
+  \item comparaison strategique A/B/C.
+\end{itemize}
+
+La premiere generation synthetique produisait des metriques volontairement tres elevees. La seconde (\texttt{dataset\_final\_realism\_v2.csv}, avec bruit, moindre dominance des predicteurs dominants, contradictions et split temporel) ramene les AUC vers environ \textbf{0,79--0,82}: ce niveau est plus \textbf{defendable pour le cas d'usage} car il limite l'illusion d'une PD ``rejouable'' a partir des seules entrees. L'ensemble reste synthetique: la validation definitive repose sur des donnees reelles avec outcomes observes.
+
+Cette demarche reste tres utile pour:
+\begin{itemize}[leftmargin=1.2cm]
+  \item industrialiser la methodologie,
+  \item aligner les equipes risque/data,
+  \item preparer la transition vers un challenger modele sur donnees reelles BFPME.
+\end{itemize}
+
+\end{document}
+

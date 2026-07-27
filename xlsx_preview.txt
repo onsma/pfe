@@ -1,0 +1,68 @@
+﻿=== RU_Crit├¿re (134r x 4c) ===
+(None, None, None, None)
+('Code', 'Libelle', 'LibelleAr', 'NonDisponible')
+(1, 'Inf├®rieur ├á 40%', 'Inf├®rieur ├á 40%', 0)
+(2, 'Entre 40% et 50 %', 'Entre 40% et 50 %', 0)
+(3, 'Entre 50% et 60 %', 'Entre 50% et 60 %', 0)
+
+=== RU_CritereNotes (328r x 12c) ===
+('Code', 'CodeCritere', 'CodeModeleNotation', 'CodeSousFacteur', 'Note', 'Ordre', 'BorneInf', 'BorneSup', 'SigneBorneInf', 'SigneBorneSup', 'Eliminatoire', 'CodeCouleur')
+(1, 1, 1, 1, -9999, 1, -999999999, 40, '<', 'Null', 'NULL', 'NULL')
+(2, 126, 1, 1, 10, 2, 40, 50, '<=', '>', 'NULL', 'NULL')
+(3, 127, 1, 1, 30, 3, 50, 60, '<=', '>', 'NULL', 'NULL')
+(4, 128, 1, 1, 50, 4, 60, 70, '<=', '>', 'NULL', 'NULL')
+
+=== RU_Facteur (7r x 4c) ===
+('Code', 'Libelle', 'LibelleAr', 'Abreviation')
+(1, 'Financier', 'Financier', 'FIN')
+(2, 'Conduite de comptes', 'Conduite de comptes', 'ACC')
+(3, 'Business', 'Business', 'Bus')
+(4, 'Managment', 'Managment', 'Man')
+
+=== RU_FacteursParModele (12r x 5c) ===
+('Code', 'CodeModeleNotation', 'CodeFacteur', 'Ponderation', 'PonderationMoyenne')
+(1, 1, 1, 22, 22)
+(2, 1, 2, 8, 8)
+(3, 1, 3, 20, 20)
+(4, 1, 4, 15, 15)
+
+=== RU_ModeleNotation (3r x 7c) ===
+('Code', 'Libelle', 'LibelleAr', 'CodeSecteurActivite', 'Actif', 'DateActivation', 'DateDesactivation')
+(1, 'Projet En Cr├®ation( Modele 2021)', '┘àÏ┤Ï▒┘êÏ╣ Ï¼Ï»┘èÏ»', 9999, 1, datetime.datetime(2021, 10, 1, 0, 0), 'NULL')
+(2, 'Projet en Extension( Modele 2021)', '┘àÏ┤Ï▒┘êÏ╣ Ï¬┘êÏ│Ï╣Ï®', 9999, 1, datetime.datetime(2021, 10, 1, 0, 0), 'NULL')
+
+=== RU_SousFacteur (62r x 6c) ===
+('Code', 'Libelle', 'LibelleAr', 'CodeNatureValeur', 'CodeTypeValeur', 'NonDisponible')
+(1, 'Capital/Cout du projet (>40%)', 'Capital/Cout du projet (>40%)', 2, 2, 1)
+(2, 'FDR/BFR (Ann├®e 1)', 'FDR/BFR (Ann├®e 1)', 2, 2, 1)
+(3, 'Acc├¿s au cr├®dit (groupe ou garantie)', 'Acc├¿s au cr├®dit (groupe ou garantie)', 4, 5, 1)
+(4, 'Montant investi par le promoteur et les associ├®s exclusion faite du pr├¬t participatif / Networth', 'Montant investi par le promoteur et les associ├®s exclusion faite du pr├¬t participatif / Networth', 2, 2, 1)
+
+=== RU_SousFacteurParModele (72r x 11c) ===
+('Code', 'CodeSousFacteur', 'CodeModeleNotation', 'CodeFacteur', 'MinWithoutKillingFactors', 'Rang', 'Priorite', 'CritereEliminatoire', 'BackGroundColor', 'AccepteNonDisponible', 'ValeurCritereObligatoire')
+(1, 1, 1, 1, 10, 1, 1, 1, 'NULL', 1, 1)
+(2, 2, 1, 1, -10, 2, 1, 1, 'NULL', 1, 1)
+(3, 3, 1, 1, 25, 3, 1, 0, 'NULL', 1, 1)
+(4, 4, 1, 1, -10, 4, 1, 0, 'NULL', 1, 1)
+
+=== RUTypeValeur (6r x 3c) ===
+('Code', 'Libelle', 'LibelleAr')
+(1, 'Valeur', 'Valeurs')
+(2, 'Pourcentage', 'Pourcentage')
+(3, 'Oui/Non', 'Oui/Non')
+(4, 'Accord/Non Accord', 'Accord/Non Accord')
+
+=== RU_NatureValeur (5r x 3c) ===
+('Code', 'Libelle', 'LibelleAr')
+(1, 'Valeurs', 'Valeurs')
+(2, 'Fourchette Valeurs', 'Fourchette Valeurs')
+(3, 'Liste valeurs', 'Liste valeurs')
+(4, 'Liste choix', 'Liste choix')
+
+=== Code source calcul de notation (278r x 1c) ===
+('public static List<ScoringNotesViewModel> ScoringNotesByProject(int Numero_DemandeFinan)// calcul de scoring par projet',)
+('        {',)
+('            BfpmeDBEntities DB = new BfpmeDBEntities();',)
+('            List<int> ListeNotationAnnulle = DB.ScoringNotationAnnulation.Select(c => c.CodeNotation).ToList();',)
+('            if (!DB.ScoringNotation.Any(c => c.CodeDemandeFinancement == Numero_DemandeFinan && !ListeNotationAnnulle.Contains(c.Code))) return new List<ScoringNotesViewModel>();',)
+

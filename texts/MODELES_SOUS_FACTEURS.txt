@@ -1,0 +1,813 @@
+================================================================================
+        BFPME — SOUS-FACTEURS PAR MODELE DE NOTATION
+        Fichier source : BTS_INFO.xlsx
+================================================================================
+
+Legende des colonnes :
+  Rang  : Ordre d'affichage du sous-facteur dans son facteur
+  Code  : Identifiant unique du sous-facteur
+  Min   : Score minimum accepte (hors criteres eliminatoires)
+  Prio  : Priorite du sous-facteur (1=haute, 5=basse) -> influence le poids calcule
+  Elim  : Critere eliminatoire (OUI = bloque le dossier si selectionne)
+  ND    : Accepte Non-Disponible (OUI = donnee absente toleree)
+  Obl   : Valeur obligatoire (OUI = saisie obligatoire)
+  Type  : Format de la valeur (%, Valeur brute, Oui/Non, Appreciation, etc.)
+  Nature: Structure de l'entree (Fourchette, Liste, Choix unique, etc.)
+
+================================================================================
+  MODELE 1 — PROJET EN CREATION (Modele 2021)
+  Actif depuis : 01/10/2021 | Secteurs : Tous
+  Total sous-facteurs : 23
+================================================================================
+
+  Ponderation des facteurs :
+  ┌─────────────────────────────┬─────────────┐
+  │ Facteur                     │ Ponderation │
+  ├─────────────────────────────┼─────────────┤
+  │ 1. Financier                │     22 %    │
+  │ 2. Conduite de comptes      │      8 %    │
+  │ 3. Business                 │     20 %    │
+  │ 4. Management               │     15 %    │
+  │ 5. Industrie                │     15 %    │
+  │ 6. Psychometrique           │     20 %    │
+  └─────────────────────────────┴─────────────┘
+
+────────────────────────────────────────────────────────────────────────────────
+  FACTEUR 1 : FINANCIER  [Ponderation : 22%]
+────────────────────────────────────────────────────────────────────────────────
+
+  Description : Evalue la solidite financiere du projet de creation, notamment
+  la structure du financement, la couverture du besoin en fonds de roulement
+  et la capacite de remboursement previsionnelle.
+
+  Rang  Code  Sous-Facteur                                            Min    Prio  Elim  ND   Obl
+  ----  ----  -------------------------------------------------------  -----  ----  ----  ---  ---
+   1      1   Capital / Cout du projet (>40%)                           10     1    OUI   OUI  OUI
+   2      2   FDR / BFR (Annee 1)                                      -10     1    OUI   OUI  OUI
+   3      3   Acces au credit (groupe ou garantie)                      25     1    NON   OUI  OUI
+   4      4   Montant investi promoteur+associes / Networth             -10     1    NON   OUI  OUI
+   5     54   Cashflow brut cumule / Echeances credit (duree totale)   -10     1    NON   OUI  OUI
+   6     55   Ratio min cashflow annuel / Echeances annuelles          -10     2    NON   OUI  OUI
+   7      5   % Financement propre PME+Promoteur / Capital             -10     1    NON   OUI  OUI
+
+  Details des sous-facteurs :
+    [1]  Capital / Cout du projet (>40%)
+         Mesure la part de capital apporte par le promoteur par rapport
+         au cout total du projet. Un apport superieur a 40% est requis.
+         Type : Pourcentage | Nature : Fourchette de valeurs
+         Score min (sans eliminatoires) : 10
+
+    [2]  FDR / BFR (Annee 1)
+         Rapport entre le Fonds de Roulement et le Besoin en Fonds de
+         Roulement de la premiere annee. Evalue la liquidite initiale.
+         Type : Pourcentage | Nature : Fourchette de valeurs
+         Score min (sans eliminatoires) : -10  | ELIMINATOIRE
+
+    [3]  Acces au credit (groupe ou garantie)
+         Existence d'un acces au credit via un groupe ou une garantie
+         externe facilitant le financement du projet.
+         Type : Appreciation | Nature : Liste a choix unique
+         Score min (sans eliminatoires) : 25
+
+    [4]  Montant investi promoteur+associes / Networth
+         Ratio entre les fonds propres investis (hors pret participatif)
+         et la valeur nette (networth) du promoteur et associes.
+         Type : Pourcentage | Nature : Fourchette de valeurs
+         Score min (sans eliminatoires) : -10
+
+    [54] Cashflow brut cumule / Echeances de credit (duree totale)
+         Rapport entre le cashflow brut cumule prevu sur toute la duree
+         du credit et le total des echeances. Mesure la solvabilite globale.
+         Type : Valeur brute | Nature : Fourchette de valeurs
+         Score min (sans eliminatoires) : -10
+
+    [55] Ratio minimum cashflow annuel / Echeances annuelles
+         Le ratio le plus defavorable (annee la plus difficile) entre
+         le cashflow annuel prevu et les echeances de credit de cette annee.
+         Type : Valeur brute | Nature : Fourchette de valeurs
+         Score min (sans eliminatoires) : -10
+
+    [5]  % Financement propre PME+Promoteur / Capital
+         Part du financement en provenance directement de la PME,
+         du promoteur et des associes par rapport au capital total.
+         Type : Pourcentage | Nature : Fourchette de valeurs
+         Score min (sans eliminatoires) : -10
+
+────────────────────────────────────────────────────────────────────────────────
+  FACTEUR 2 : CONDUITE DE COMPTES  [Ponderation : 8%]
+────────────────────────────────────────────────────────────────────────────────
+
+  Description : Evalue le comportement bancaire du promoteur et des associes
+  aupres de la SED et de la BFPME. Tous les sous-facteurs sont eliminatoires.
+
+  Rang  Code  Sous-Facteur                                            Min    Prio  Elim  ND   Obl
+  ----  ----  -------------------------------------------------------  -----  ----  ----  ---  ---
+   1     56   Cheques impayes                                            0     1    OUI   OUI  NON
+   2     57   Blacklist au cours des 12 derniers mois                    0     1    OUI   OUI  NON
+   3      6   Classement defavorable promoteur+associes SED+BFPME        0     1    OUI   OUI  NON
+              (3 annees precedentes)
+
+  Details des sous-facteurs :
+    [56] Cheques impayes
+         Existence de cheques impayes signales. Critere eliminatoire :
+         tout cheque impaye bloque automatiquement le dossier.
+         Type : Oui/Non | Nature : Liste de valeurs
+
+    [57] Blacklist au cours des 12 derniers mois
+         Le promoteur ou un associe figure-t-il sur une liste noire
+         bancaire au cours des 12 derniers mois ?
+         Type : Oui/Non | Nature : Liste de valeurs
+
+    [6]  Classement defavorable promoteur+associes (SED et BFPME, 3 ans)
+         Le classement le plus defavorable enregistre par la personne
+         morale ou physique aupres de la SED et BFPME sur 3 ans.
+         Type : Valeur brute | Nature : Fourchette de valeurs
+         Score min (sans eliminatoires) : 0  | ELIMINATOIRE
+
+────────────────────────────────────────────────────────────────────────────────
+  FACTEUR 3 : BUSINESS  [Ponderation : 20%]
+────────────────────────────────────────────────────────────────────────────────
+
+  Description : Evalue la viabilite commerciale et strategique du projet :
+  diversification clients, securite des locaux, chaine d'approvisionnement
+  et commercialisabilite du produit ou service.
+
+  Rang  Code  Sous-Facteur                                            Min    Prio  Elim  ND   Obl
+  ----  ----  -------------------------------------------------------  -----  ----  ----  ---  ---
+   1      8   Concentration des ventes (2 premiers clients)              0     1    NON   OUI  NON
+   2      9   Statut vis-a-vis des locaux d'exploitation                 0     3    NON   OUI  NON
+   3     10   Risque de la chaine d'approvisionnement                    0     2    NON   OUI  NON
+   4     58   Diversite des produits                                    25     2    NON   OUI  NON
+   5      7   Facilement vendable / Niveau de commercialisation         -10     2    NON   OUI  NON
+
+  Details des sous-facteurs :
+    [8]  Concentration des ventes sur les 2 premiers clients
+         Quelle part du chiffre d'affaires est dependante des 2 premiers
+         clients ? Une forte concentration = risque commercial eleve.
+         Type : Pourcentage | Nature : Fourchette de valeurs
+
+    [9]  Statut de l'entreprise vis-a-vis de ses locaux d'exploitation
+         Le promoteur est-il proprietaire, locataire ou en situation
+         precaire vis-a-vis de ses locaux ?
+         Type : Appreciation | Nature : Liste a choix unique
+
+    [10] Risque de la chaine d'approvisionnement
+         Evaluation du risque lie aux fournisseurs : dependance,
+         alternative, stabilite de la chaine d'approvisionnement.
+         Type : Appreciation | Nature : Liste a choix unique
+
+    [58] Diversite des produits
+         Nombre et variete des produits ou services proposes.
+         Une gamme diversifiee reduit le risque de concentration.
+         Type : Valeur brute | Nature : Liste de valeurs
+         Score min (sans eliminatoires) : 25
+
+    [7]  Facilement vendable / Niveau de commercialisation
+         Le produit ou service est-il facilement ecouable sur le marche ?
+         Evalue la marketabilite et le niveau de demande.
+         Type : Appreciation | Nature : Liste a choix unique
+         Score min (sans eliminatoires) : -10
+
+────────────────────────────────────────────────────────────────────────────────
+  FACTEUR 4 : MANAGEMENT  [Ponderation : 15%]
+────────────────────────────────────────────────────────────────────────────────
+
+  Description : Evalue les competences humaines du promoteur, des associes
+  et du gerant : age, plan de continuite et capacites professionnelles
+  sur les plans technique, commercial et managerial.
+
+  Rang  Code  Sous-Facteur                                            Min    Prio  Elim  ND   Obl
+  ----  ----  -------------------------------------------------------  -----  ----  ----  ---  ---
+   1     59   Age du promoteur / Gerant / Directeur General            25     1    NON   OUI  NON
+   2     60   Plan de succession                                         0     2    NON   OUI  NON
+   3     11   Capacites professionnelles - Techniques                    0     2    NON   OUI  NON
+   4     12   Capacites professionnelles - Commerciales                  0     2    NON   OUI  NON
+   5     13   Capacites professionnelles - Managerielles                 0     2    NON   OUI  NON
+
+  Details des sous-facteurs :
+    [59] Age du promoteur / Gerant / DG
+         Age de la personne cle du projet. Un age trop eleve ou
+         trop jeune peut etre un facteur de risque.
+         Type : Valeur brute | Nature : Fourchette de valeurs
+         Score min (sans eliminatoires) : 25
+
+    [60] Plan de succession
+         Existe-t-il un plan de releve en cas de defaillance
+         de la personne cle (promoteur, gerant, DG) ?
+         Type : Appreciation | Nature : Liste a choix unique
+
+    [11] Capacites professionnelles - Techniques
+         Niveau de maitrise technique du metier par le promoteur,
+         les associes et le gerant.
+         Type : Appreciation | Nature : Liste a choix unique
+
+    [12] Capacites professionnelles - Commerciales
+         Aptitude a vendre, negocier, developper un reseau
+         commercial et gerer la relation client.
+         Type : Appreciation | Nature : Liste a choix unique
+
+    [13] Capacites professionnelles - Managerielles
+         Capacite a diriger une equipe, organiser, planifier
+         et prendre des decisions strategiques.
+         Type : Appreciation | Nature : Liste a choix unique
+
+────────────────────────────────────────────────────────────────────────────────
+  FACTEUR 5 : INDUSTRIE  [Ponderation : 15%]
+────────────────────────────────────────────────────────────────────────────────
+
+  Description : Evalue le contexte sectoriel et macroeconomique dans lequel
+  le projet evolue : exposition au risque de change, risque sectoriel global
+  et niveau de concurrence sur le marche cible.
+
+  Rang  Code  Sous-Facteur                                            Min    Prio  Elim  ND   Obl
+  ----  ----  -------------------------------------------------------  -----  ----  ----  ---  ---
+   1     61   Sensibilite au taux de change                            -10     1    NON   OUI  NON
+   2     62   Risque du secteur d'activites                            -50     2    NON   OUI  NON
+   3     14   Competitivite / Concurrence                                0     3    NON   OUI  NON
+
+  Details des sous-facteurs :
+    [61] Sensibilite au taux de change
+         Dans quelle mesure le projet est-il expose aux variations
+         du taux de change (achats en devises, exportations, etc.) ?
+         Type : Appreciation | Nature : Liste a choix unique
+         Score min (sans eliminatoires) : -10
+
+    [62] Risque du secteur d'activites
+         Evaluation du risque inherent au secteur : cyclicite,
+         reglementation, barriere a l'entree, perspectives.
+         Type : Appreciation | Nature : Liste a choix unique
+         Score min (sans eliminatoires) : -50
+
+    [14] Competitivite / Concurrence
+         Niveau de concurrence sur le marche cible. Un marche tres
+         concurrentiel diminue les chances de succes du projet.
+         Type : Appreciation | Nature : Liste a choix unique
+
+────────────────────────────────────────────────────────────────────────────────
+  FACTEUR 6 : PSYCHOMETRIQUE  [Ponderation : 20%]
+────────────────────────────────────────────────────────────────────────────────
+
+  Description : Evalue le profil comportemental et psychologique du promoteur
+  a travers 17 questions d'auto-evaluation. Deux questions sont eliminatoires
+  (reputation et integrite). Ce facteur est EXCLUSIF au Modele 1 (Creation).
+
+  Note : Toutes les reponses sont de type "Liste a choix unique" et aucune
+  donnee n'est acceptee comme "Non Disponible" (ND = NON pour tous).
+
+  Rang  Code  Sous-Facteur (Question)                                 Min    Prio  Elim
+  ----  ----  -------------------------------------------------------  -----  ----  ----
+   1     15   Je suis un leader dans la plupart des groupes            -10     1    NON
+   2     16   Les presentations a l'ecole etaient difficiles pour moi  -10     1    NON
+   3     17   Ca m'inquiete que les gens decouvrent mes faiblesses     -10     1    NON
+   4     18   Il y a beaucoup de choses dans mon passe que je          -10     1    NON
+              voudrais changer
+   5     19   Il m'est difficile d'agir naturellement avec des         -10     3    NON
+              inconnus
+   6     20   J'arrive rarement a atteindre mes standards de perf.    -10     3    NON
+   7     21   Je fais confiance uniquement aux personnes que je        -10     2    NON
+              connais bien
+   8     22   J'ai une bonne reputation dans mon voisinage  *KILLING*   0     1    OUI
+   9     23   Il est primordial de planifier les activites du projet   -10     1    NON
+  10     24   Ca me donne de l'energie quand les gens attendent        -10     2    NON
+              de moi de nouvelles idees
+  11     25   Je pose des questions difficiles quand on travaille      -10     3    NON
+              sur des projets communs
+  12     26   Je trouve facile d'etre cheerleader dans bons et         -10     4    NON
+              mauvais moments
+  13     27   L'accomplissement de l'equipe > mon accomplissement      -10     2    NON
+              personnel
+  14     28   Je fais en sorte d'ameliorer la cohesion d'equipe        -10     3    NON
+  15     29   Dans des projets communs, je propose souvent de          -10     1    NON
+              nouvelles idees
+  16     30   Je prend des risques, c'est un facteur d'innovation      -10     1    NON
+  17     31   Integrite                           *KILLING*              0     1    OUI
+
+  (*) KILLING : critere dont la mauvaise reponse elimine definitivement
+      le dossier, independamment de tous les autres scores.
+
+
+================================================================================
+  MODELE 2 — PROJET EN EXTENSION (Modele 2021)
+  Actif depuis : 01/10/2021 | Secteurs : Tous
+  Total sous-facteurs : 27
+================================================================================
+
+  Ponderation des facteurs :
+  ┌─────────────────────────────┬─────────────┐
+  │ Facteur                     │ Ponderation │
+  ├─────────────────────────────┼─────────────┤
+  │ 1. Financier                │     40 %    │
+  │ 2. Conduite de comptes      │     20 %    │
+  │ 3. Business                 │     15 %    │
+  │ 4. Management               │     15 %    │
+  │ 5. Industrie                │     10 %    │
+  └─────────────────────────────┴─────────────┘
+  (Pas de facteur Psychometrique dans ce modele)
+
+────────────────────────────────────────────────────────────────────────────────
+  FACTEUR 1 : FINANCIER  [Ponderation : 40%]
+────────────────────────────────────────────────────────────────────────────────
+
+  Description : Facteur dominant du Modele 2. Le projet en extension ayant
+  un historique comptable, l'analyse financiere est beaucoup plus detaillee :
+  ratios de solvabilite, liquidite, rentabilite, endettement et croissance
+  sur les exercices passes, plus les previsions de remboursement.
+
+  Rang  Code  Sous-Facteur                                            Min    Prio  Elim  ND   Obl
+  ----  ----  -------------------------------------------------------  -----  ----  ----  ---  ---
+   1     54   Cashflow brut cumule / Echeances credit (duree totale)   -10     1    NON   OUI  OUI
+   2     32   (Dettes MLT+CT - Liquidites) / Cashflow Brut              0     2    OUI   OUI  OUI
+   3     33   Actifs courants / Passifs courants                       -10     3    NON   OUI  OUI
+   4     34   SNC / Total bilan                                        -20     3    NON   OUI  OUI
+   5     35   (Dettes MLT+CT BFPME+SED) / Chiffre d'affaires          -10     4    NON   OUI  OUI
+   6     36   Resultat net / Chiffre d'affaires                        -10     5    NON   OUI  OUI
+   7     37   Dettes fourn. - stock - creances clients (en jours)      -20     5    NON   OUI  OUI
+   8     38   Croissance moyenne CA sur 3 ans                          -50     7    NON   OUI  OUI
+   9     39   Capitaux propres / Capitaux permanents                     0     4    NON   OUI  OUI
+  10     55   Ratio min cashflow annuel / Echeances annuelles          -10     1    NON   OUI  OUI
+  11     40   % Financement propre PME+Promoteur                       -10     2    NON   OUI  OUI
+
+  Details des sous-facteurs :
+    [54] Cashflow brut cumule / Echeances credit
+         Rapport entre le cashflow brut total sur la duree du credit
+         et le total des echeances. Mesure la capacite globale de rembt.
+         Type : Valeur brute | Nature : Fourchette de valeurs
+
+    [32] (Dettes MLT+CT - Liquidites) / Cashflow Brut
+         Ratio d'endettement net par rapport a la capacite de generation
+         de cash. Indicateur cle de solvabilite.  | ELIMINATOIRE
+         Type : Valeur brute | Nature : Fourchette de valeurs
+
+    [33] Actifs courants / Passifs courants (ratio de liquidite generale)
+         Mesure la capacite de l'entreprise a couvrir ses dettes a court
+         terme avec ses actifs a court terme.
+         Type : Valeur brute | Nature : Fourchette de valeurs
+
+    [34] SNC / Total bilan (Structure Nette Corrigee)
+         Part des capitaux propres corriges dans le bilan total.
+         Evalue la solidite de la structure financiere.
+         Type : Pourcentage | Nature : Fourchette de valeurs
+
+    [35] (Dettes BFPME+SED) / Chiffre d'affaires
+         Niveau d'endettement envers les institutions de financement
+         par rapport au volume d'affaires genere.
+         Type : Pourcentage | Nature : Fourchette de valeurs
+
+    [36] Resultat net / Chiffre d'affaires (marge nette)
+         Rentabilite nette de l'entreprise. Une marge negative ou
+         tres faible constitue un signal d'alerte.
+         Type : Pourcentage | Nature : Fourchette de valeurs
+
+    [37] Dettes fournisseurs - Stock - Creances clients (en jours)
+         Cycle de tresorerie : difference entre le delai de paiement
+         fournisseurs et le delai de recouvrement clients + stock.
+         Type : Valeur brute | Nature : Fourchette de valeurs
+
+    [38] Croissance moyenne du CA sur 3 ans
+         Taux de croissance annuel moyen du chiffre d'affaires
+         sur les 3 derniers exercices. Evalue le dynamisme commercial.
+         Type : Pourcentage | Nature : Fourchette de valeurs
+         Score min (sans eliminatoires) : -50
+
+    [39] Capitaux propres / Capitaux permanents
+         Part des capitaux propres dans les ressources a long terme.
+         Mesure l'autonomie financiere de l'entreprise.
+         Type : Valeur brute | Nature : Fourchette de valeurs
+
+    [55] Ratio min cashflow annuel / Echeances annuelles
+         L'annee la plus defavorable : cashflow vs echeances de l'annee.
+         Detecte les periodes de tension de tresorerie.
+         Type : Valeur brute | Nature : Fourchette de valeurs
+
+    [40] % Financement propre PME+Promoteur
+         Part des ressources propres (PME + promoteur + associes) dans
+         le financement total du projet d'extension.
+         Type : Pourcentage | Nature : Fourchette de valeurs
+
+────────────────────────────────────────────────────────────────────────────────
+  FACTEUR 2 : CONDUITE DE COMPTES  [Ponderation : 20%]
+────────────────────────────────────────────────────────────────────────────────
+
+  Description : Historique du comportement bancaire reel de l'entreprise
+  aupres de la SED et BFPME. Plus approfondi que dans le Modele 1 car
+  l'entreprise a un veritable historique de remboursement.
+  TOUS les sous-facteurs de ce facteur sont eliminatoires.
+
+  Rang  Code  Sous-Facteur                                            Min    Prio  Elim  ND   Obl
+  ----  ----  -------------------------------------------------------  -----  ----  ----  ---  ---
+   1     56   Cheques impayes                                            0     1    OUI   OUI  NON
+   2     57   Blacklist au cours des 12 derniers mois                    0     1    OUI   OUI  NON
+   3     41   Nb max jours d'impayes consecutifs (annee precedente)      0     1    OUI   OUI  OUI
+   4     42   Classement le plus defavorable SED+BFPME (annee prec.)   80     1    OUI   OUI  NON
+   5     43   Paiement capital annee prec. / Encours debut annee prec.   0     3    OUI   OUI  NON
+
+  Details des sous-facteurs :
+    [56] Cheques impayes
+         Existence de cheques impayes signales. Eliminatoire immediat.
+         Type : Oui/Non | Nature : Liste de valeurs
+
+    [57] Blacklist au cours des 12 derniers mois
+         Inscription sur une liste noire bancaire dans les 12 derniers mois.
+         Type : Oui/Non | Nature : Liste de valeurs
+
+    [41] Nombre max de jours d'impayes consecutifs (annee precedente)
+         Le nombre maximum de jours consecutifs d'impaye enregistre
+         au cours de l'annee precedente. Seuil eliminatoire fixe.
+         Type : Valeur brute | Nature : Fourchette de valeurs
+
+    [42] Classement le plus defavorable SED+BFPME (annee precedente)
+         Le pire classement obtenu aupres des deux institutions
+         au cours de la derniere annee.
+         Score min : 80 (classement minimum acceptable)
+         Type : Valeur brute | Nature : Fourchette de valeurs
+
+    [43] Paiement capital annee prec. / Encours debut annee prec.
+         Taux de remboursement du capital : somme remboursee sur l'annee
+         divisee par l'encours en debut d'annee. Mesure le serieux de rembt.
+         Type : Pourcentage | Nature : Fourchette de valeurs
+
+────────────────────────────────────────────────────────────────────────────────
+  FACTEUR 3 : BUSINESS  [Ponderation : 15%]
+────────────────────────────────────────────────────────────────────────────────
+
+  Description : Evalue la maturite commerciale de l'entreprise en extension :
+  portefeuille clients, experience sectorielle, chaine de livraison,
+  moyens materiels et diversite de l'offre produit.
+
+  Rang  Code  Sous-Facteur                                            Min    Prio  Elim  ND   Obl
+  ----  ----  -------------------------------------------------------  -----  ----  ----  ---  ---
+   1     44   Concentration des ventes (3 premiers clients)              0     1    NON   OUI  NON
+   2     45   Nombre d'annees d'experience                               0     1    NON   OUI  NON
+   3     46   Risque de la chaine de livraison                           0     2    NON   OUI  NON
+   4     58   Diversite des produits                                    25     2    NON   OUI  NON
+   5     47   Moyens materiels                                          -10     5    NON   OUI  NON
+
+  Details des sous-facteurs :
+    [44] Concentration des ventes sur les 3 premiers clients
+         Part du CA realisee avec les 3 premiers clients.
+         (Modele 2 analyse 3 clients vs 2 dans le Modele 1)
+         Type : Pourcentage | Nature : Fourchette de valeurs
+
+    [45] Nombre d'annees d'experience
+         Experience accumulee du promoteur / gerant dans le secteur.
+         Une experience longue reduit le risque operationnel.
+         Type : Valeur brute | Nature : Fourchette de valeurs
+
+    [46] Risque de la chaine de livraison
+         Evaluation du risque aval : fiabilite de la distribution,
+         logistique, dependance a des reseaux de livraison specifiques.
+         Type : Appreciation | Nature : Liste a choix unique
+
+    [58] Diversite des produits
+         Variete et complementarite des produits / services proposes.
+         Type : Valeur brute | Nature : Liste de valeurs
+         Score min (sans eliminatoires) : 25
+
+    [47] Moyens materiels
+         Adequation des equipements, machines et outils de production
+         avec les besoins du projet d'extension.
+         Type : Appreciation | Nature : Liste a choix unique
+         Score min (sans eliminatoires) : -10
+
+────────────────────────────────────────────────────────────────────────────────
+  FACTEUR 4 : MANAGEMENT  [Ponderation : 15%]
+────────────────────────────────────────────────────────────────────────────────
+
+  Description : Evalue la qualite du management d'une entreprise existante :
+  gouvernance, image, strategie de developpement et profil des dirigeants.
+  Plus oriente "gestion d'entreprise" que dans le Modele 1.
+
+  Rang  Code  Sous-Facteur                                            Min    Prio  Elim  ND   Obl
+  ----  ----  -------------------------------------------------------  -----  ----  ----  ---  ---
+   1     48   Capacites professionnelles                                 0     1    NON   OUI  NON
+   2     49   Image et reputation du management                        -15     2    NON   OUI  NON
+   3     59   Age du promoteur / Gerant / DG                             0     3    NON   OUI  NON
+   4     60   Plan de succession                                         0     3    NON   OUI  NON
+   5     50   Qualite de la Gouvernance                                 40     1    NON   OUI  NON
+   6     51   Strategie de developpement                                50     5    NON   OUI  NON
+
+  Details des sous-facteurs :
+    [48] Capacites professionnelles
+         Evaluation globale et synthetique des competences du management
+         (technique, commercial, managerial regroupe en un seul critere).
+         Type : Appreciation | Nature : Liste a choix unique
+
+    [49] Image et reputation du management
+         Perception du management par les partenaires, clients,
+         fournisseurs et institutions financieres.
+         Score min : -15
+         Type : Appreciation | Nature : Liste a choix unique
+
+    [59] Age du promoteur / Gerant / DG
+         Age de la personne cle. Dans le Modele 2, le score min est 0
+         (moins penalisant que dans le Modele 1 ou il est de 25).
+         Type : Valeur brute | Nature : Fourchette de valeurs
+
+    [60] Plan de succession
+         Existence d'un plan de releve en cas d'absence du dirigeant.
+         Type : Appreciation | Nature : Liste a choix unique
+
+    [50] Qualite de la Gouvernance
+         Structuration des organes de decision, transparence,
+         separation des fonctions, conformite legale.
+         Score min : 40
+         Type : Appreciation | Nature : Liste a choix unique
+
+    [51] Strategie de developpement
+         Existence et qualite d'une strategie claire de croissance,
+         d'innovation ou de diversification.
+         Score min : 50
+         Type : Appreciation | Nature : Liste a choix unique
+
+────────────────────────────────────────────────────────────────────────────────
+  FACTEUR 5 : INDUSTRIE  [Ponderation : 10%]
+────────────────────────────────────────────────────────────────────────────────
+
+  Description : Analyse le contexte sectoriel et la position concurrentielle
+  de l'entreprise. Enrichi d'une dimension "strategie commerciale" par rapport
+  au Modele 1.
+
+  Rang  Code  Sous-Facteur                                            Min    Prio  Elim  ND   Obl
+  ----  ----  -------------------------------------------------------  -----  ----  ----  ---  ---
+   1     52   Strategie commerciale                                       0     1    NON   OUI  NON
+   2     14   Competitivite / Concurrence                                 0     2    NON   OUI  NON
+   3     61   Sensibilite au taux de change                             -10     3    NON   OUI  NON
+   4     62   Risque du secteur d'activites                             -50     3    NON   OUI  NON
+
+  Details des sous-facteurs :
+    [52] Strategie commerciale
+         Qualite et pertinence de la strategie de vente et de
+         developpement commercial de l'entreprise.
+         Type : Appreciation | Nature : Liste a choix unique
+
+    [14] Competitivite / Concurrence
+         Positionnement de l'entreprise face a la concurrence existante
+         sur son marche.
+         Type : Appreciation | Nature : Liste a choix unique
+
+    [61] Sensibilite au taux de change
+         Exposition de l'entreprise aux fluctuations monetaires
+         (achats en devises, recettes en devises, etc.)
+         Score min : -10
+         Type : Appreciation | Nature : Liste a choix unique
+
+    [62] Risque du secteur d'activites
+         Risque systemique du secteur d'activite de l'entreprise.
+         Score min : -50 (secteurs tres risques fortement penalises)
+         Type : Appreciation | Nature : Liste a choix unique
+
+
+================================================================================
+  COMPARATIF MODELE 1 vs MODELE 2
+================================================================================
+
+  Sous-facteurs COMMUNS aux deux modeles :
+  ┌──────┬──────────────────────────────────────────────────────────────┐
+  │ Code │ Sous-Facteur                                                 │
+  ├──────┼──────────────────────────────────────────────────────────────┤
+  │  54  │ Cashflow brut cumule / Echeances credit (duree totale)       │
+  │  55  │ Ratio minimum cashflow annuel / Echeances annuelles          │
+  │  56  │ Cheques impayes                                              │
+  │  57  │ Blacklist au cours des 12 derniers mois                      │
+  │  58  │ Diversite des produits                                       │
+  │  59  │ Age du promoteur / Gerant / DG                               │
+  │  60  │ Plan de succession                                           │
+  │  14  │ Competitivite / Concurrence                                  │
+  │  61  │ Sensibilite au taux de change                                │
+  │  62  │ Risque du secteur d'activites                                │
+  └──────┴──────────────────────────────────────────────────────────────┘
+
+  Sous-facteurs EXCLUSIFS au Modele 1 (Creation) :
+    - Capital / Cout du projet (>40%)
+    - FDR / BFR (Annee 1)
+    - Acces au credit (groupe ou garantie)
+    - Montant investi promoteur / Networth
+    - % Financement propre / Capital
+    - Classement defavorable promoteur+associes SED+BFPME (3 ans)
+    - Concentration des ventes (2 premiers clients)
+    - Statut vis-a-vis des locaux
+    - Risque chaine d'approvisionnement
+    - Facilement vendable / commercialisation
+    - Capacites prof. Techniques / Commerciales / Managerielles (3 criteres)
+    - 17 questions Psychometriques (facteur entier exclusif)
+
+  Sous-facteurs EXCLUSIFS au Modele 2 (Extension) :
+    - (Dettes MLT+CT - Liquidites) / Cashflow Brut
+    - Actifs courants / Passifs courants
+    - SNC / Total bilan
+    - (Dettes BFPME+SED) / Chiffre d'affaires
+    - Resultat net / Chiffre d'affaires
+    - Dettes fourn. - stock - creances clients (en jours)
+    - Croissance moyenne CA sur 3 ans
+    - Capitaux propres / Capitaux permanents
+    - % Financement propre PME+Promoteur
+    - Nb max jours d'impayes consecutifs
+    - Classement defavorable SED+BFPME (annee precedente)
+    - Paiement capital / Encours (annee precedente)
+    - Concentration des ventes (3 premiers clients)
+    - Nombre d'annees d'experience
+    - Risque chaine de livraison
+    - Moyens materiels
+    - Capacites professionnelles (global)
+    - Image et reputation du management
+    - Qualite de la Gouvernance
+    - Strategie de developpement
+    - Strategie commerciale
+
+================================================================================
+  FORMULES DE CALCUL DU SCORING
+================================================================================
+
+  Ces formules sont extraites directement du code C# (ScoringService.cs).
+  Elles s'appliquent a chaque sous-facteur de la notation active du dossier.
+
+────────────────────────────────────────────────────────────────────────────────
+  ETAPE 1 — Poids dynamique du sous-facteur (SubWeight)
+────────────────────────────────────────────────────────────────────────────────
+
+  Le poids de chaque sous-facteur n'est pas fixe : il est calcule
+  dynamiquement a partir de sa priorite relative dans son facteur.
+
+  Formule :
+
+    PrioriteMoyenne(SF) = (MaxPriorite + 1 - Priorite(SF)) / NbreSousFacteurs
+
+    SubWeight(SF) = PrioriteMoyenne(SF) x 100 / Somme(PrioriteMoyenne de tous les SF du facteur)
+
+    WeightGoodFinancial(SF)    = SubWeight(SF) / 100 x PonderationGoodFinancial(Facteur)
+    WeightAverageFinancial(SF) = SubWeight(SF) / 100 x PonderationAverageFinancial(Facteur)
+
+  Explication :
+    - Un sous-facteur de Priorite=1 (la plus haute) obtient le poids le plus ELEVE.
+    - La formule (MaxPriorite + 1 - Priorite) inverse l'echelle : plus la priorite
+      est haute (chiffre bas), plus le poids calcule est grand.
+    - Le resultat est normalise par la somme des priorites moyennes du facteur
+      pour que la somme des SubWeights d'un facteur soit toujours = 100%.
+
+  Exemple (Modele 1, Facteur FINANCIER, 7 sous-facteurs, tous Priorite=1 sauf SF55 Prio=2) :
+    MaxPriorite = 2, NbreSousFacteurs = 7
+    SF1  (Prio=1) : PrioMoy = (2+1-1)/7 = 2/7 = 0.286
+    SF55 (Prio=2) : PrioMoy = (2+1-2)/7 = 1/7 = 0.143
+    -> SF55 aura un poids deux fois moins important que les autres SF du facteur FIN.
+
+────────────────────────────────────────────────────────────────────────────────
+  ETAPE 2 — Note attribuee au critere selectionne (NoteAttribuee)
+────────────────────────────────────────────────────────────────────────────────
+
+  Logique conditionnelle (3 cas) :
+
+  CAS 1 — Critere selectionne ET donnee disponible :
+    NoteAttribuee = Note dans RU_CritereNotes
+                    pour (CodeCritere, CodeSousFacteur, CodeModeleNotation)
+
+  CAS 2 — Critere selectionne MAIS donnee marquee "Non Disponible" :
+    NoteAttribuee = Somme(Notes > -70 du sous-facteur) / Nb(criteres avec Note >= -70)
+                 -> On remplace la donnee absente par la moyenne des notes
+                    positives/acceptables du sous-facteur.
+
+  CAS 3 — Aucun critere selectionne (CodeCritere = 0) :
+    NoteAttribuee = 0
+
+  Seuil eliminatoire : NoteSeuildeCalul = -70
+    Toute note <= -70 est consideree comme un critere eliminatoire
+    et exclue du calcul de la moyenne (CAS 2).
+
+  Note speciale -9999 : note eliminatoire absolue.
+    Si un critere a Note = -9999, le dossier est automatiquement rejete.
+
+────────────────────────────────────────────────────────────────────────────────
+  ETAPE 3 — Note ponderee du critere (NotePondereCritere)
+────────────────────────────────────────────────────────────────────────────────
+
+  Formule :
+
+    NotePondereeGood(SF)    = NoteAttribuee(SF) x WeightGoodFinancial(SF) / 100
+    NotePondereeAverage(SF) = NoteAttribuee(SF) x WeightAverageFinancial(SF) / 100
+
+  Explication :
+    On multiplie la note brute obtenue (CAS 1/2/3 ci-dessus) par le poids
+    du sous-facteur dans le modele. La somme de ces notes ponderees sur tous
+    les sous-facteurs donne le score total avant normalisation.
+
+────────────────────────────────────────────────────────────────────────────────
+  ETAPE 4 — Calcul des bornes globales de normalisation
+────────────────────────────────────────────────────────────────────────────────
+
+  Ces bornes sont calculees UNE SEULE FOIS par dossier, sur la totalite
+  des sous-facteurs du modele, avant d'entrer dans la boucle de calcul.
+
+  MinSomme = Somme sur tous les SF de : (MinSansEliminatoire(SF) x Weight(SF) / 100)
+  MaxSomme = Somme sur tous les SF de : (NoteMax(SF) x Weight(SF) / 100)
+
+  Deux scenarios calcules en parallele :
+    MinSomme_Good    / MaxSomme_Good    : scenario financier optimiste
+    MinSomme_Average / MaxSomme_Average : scenario financier moyen/prudent
+
+  Borne basse retenue : MinGlobal = min(MinSomme_Good, MinSomme_Average)
+  Borne haute retenue : MaxGlobal = max(MaxSomme_Good, MaxSomme_Average)
+
+  Explication :
+    Ces bornes representent le score total theorique le plus bas possible
+    et le plus haut possible pour ce modele. Elles servent a normaliser
+    tous les scores individuels sur une meme echelle.
+
+────────────────────────────────────────────────────────────────────────────────
+  ETAPE 5 — Score final normalise (ScoreCalcule)
+────────────────────────────────────────────────────────────────────────────────
+
+  Formule (appliquee pour chaque sous-facteur) :
+
+    ScoreCalculeGood(SF) =
+        ( NotePondereeGood(SF) - MinGlobal/NbSF ) x 200
+        ─────────────────────────────────────────────────  +  100 / NbSF
+                  MaxGlobal - MinGlobal
+
+    ScoreCalculeAverage(SF) =
+        ( NotePondereeAverage(SF) - MinGlobal/NbSF ) x 200
+        ────────────────────────────────────────────────────  +  100 / NbSF
+                    MaxGlobal - MinGlobal
+
+  Variables :
+    NbSF      = Nombre total de sous-facteurs notes dans le dossier
+    MinGlobal = Borne basse globale (min des deux scenarios)
+    MaxGlobal = Borne haute globale (max des deux scenarios)
+
+  Explication :
+    - La formule centre et reduit la note ponderee entre 0 et 200.
+    - Le terme "+ 100/NbSF" est un ajustement qui garantit qu'un score
+      dans la moyenne du modele donne un resultat proche de 100/200.
+    - Un score de 200/200 correspond au meilleur profil theorique possible.
+    - Un score de 0/200 correspond au profil le plus risque tolere.
+
+  Cas special — Non disponibilite :
+    Si ExisteNonDisponible = TRUE (un sous-facteur obligatoire n'a pas de valeur) :
+      ScoreCalculeGood    = 0
+      ScoreCalculeAverage = 0
+    -> Tout le scoring est annule jusqu'a ce que la donnee soit saisie.
+
+────────────────────────────────────────────────────────────────────────────────
+  RECAPITULATIF — CHAINE DE CALCUL COMPLETE
+────────────────────────────────────────────────────────────────────────────────
+
+  Pour chaque sous-facteur SF d'un dossier de financement :
+
+  [1] Priorite(SF) dans RU_SousFacteurParModele
+           |
+           v
+  [2] PrioriteMoyenne(SF) = (MaxPrio + 1 - Prio) / NbreSF_du_Facteur
+           |
+           v
+  [3] SubWeight(SF) = PrioMoy x 100 / Somme(PrioMoy_du_Facteur)
+           |
+           v
+  [4] WeightGood(SF)    = SubWeight x PonderationGoodFacteur / 100
+      WeightAverage(SF) = SubWeight x PonderationAverageFacteur / 100
+           |
+           v
+  [5] NoteAttribuee(SF) depuis RU_CritereNotes
+      (ou moyenne si Non Disponible, ou 0 si absent)
+           |
+           v
+  [6] NotePondereeGood(SF)    = NoteAttribuee x WeightGood    / 100
+      NotePondereeAverage(SF) = NoteAttribuee x WeightAverage / 100
+           |
+           v
+  [7] ScoreCalculeGood(SF)    = (NotePondereeGood    - MinGlobal/N) x 200 / (MaxGlobal - MinGlobal) + 100/N
+      ScoreCalculeAverage(SF) = (NotePondereeAverage - MinGlobal/N) x 200 / (MaxGlobal - MinGlobal) + 100/N
+           |
+           v
+  [8] Score final par facteur = Somme des ScoreCalcule de tous ses SF
+      Score global du dossier = Somme des scores de tous les facteurs
+
+────────────────────────────────────────────────────────────────────────────────
+  PONDERATIONS DES FACTEURS PAR MODELE (rappel)
+────────────────────────────────────────────────────────────────────────────────
+
+  ┌─────────────────────────┬───────────┬───────────┐
+  │ Facteur                 │ Modele 1  │ Modele 2  │
+  │                         │ Creation  │ Extension │
+  ├─────────────────────────┼───────────┼───────────┤
+  │ 1. Financier            │   22 %    │   40 %    │
+  │ 2. Conduite de comptes  │    8 %    │   20 %    │
+  │ 3. Business             │   20 %    │   15 %    │
+  │ 4. Management           │   15 %    │   15 %    │
+  │ 5. Industrie            │   15 %    │   10 %    │
+  │ 6. Psychometrique       │   20 %    │   N/A     │
+  ├─────────────────────────┼───────────┼───────────┤
+  │ TOTAL                   │  100 %    │  100 %    │
+  └─────────────────────────┴───────────┴───────────┘
+
+  Observations :
+    - Le Modele 2 accorde presque le DOUBLE de poids au Facteur Financier
+      (40% vs 22%) car l'entreprise dispose d'un historique comptable reel.
+    - La Conduite de comptes passe de 8% a 20% : l'historique de remboursement
+      est un indicateur beaucoup plus fiable pour une entreprise existante.
+    - Le Business et l'Industrie perdent du poids dans le Modele 2
+      car ils sont moins determinants que les donnees financieres historiques.
+    - Le facteur Psychometrique (20%) est exclusif au Modele 1 : pour un
+      nouveau projet, le profil comportemental du promoteur est un indicateur
+      cle en l'absence de donnees financieres historiques.
+
+================================================================================
+  FIN DU FICHIER
+================================================================================

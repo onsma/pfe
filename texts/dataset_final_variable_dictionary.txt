@@ -1,0 +1,651 @@
+BFPME - Dataset Final Variable Dictionary and Business Logic
+===========================================================
+
+File concerned:
+- data/dataset_final.csv
+
+Purpose of the dataset
+----------------------
+This dataset was built as an enriched, centralized dataset for credit-risk modeling.
+It starts from the existing synthetic BFPME score dataset and adds business, financial,
+behavioral, guarantee, and macroeconomic variables so that it can serve as a realistic
+starting point for binary default classification.
+
+Main modeling objective
+-----------------------
+- Target for classification: default_flag
+- Intermediate latent probability: pd_target
+
+Important note
+--------------
+The dataset is synthetic. It does not represent observed real defaults. It is a
+business-driven simulation designed to be coherent enough for:
+- prototyping,
+- model comparison,
+- feature engineering,
+- classification workflows,
+- credit-risk use cases such as PD-style modeling.
+
+
+1. OVERALL GENERATION LOGIC
+===========================
+
+The dataset was generated with a hidden business driver:
+- latent_risk
+- latent_quality = 1 - latent_risk
+
+This hidden risk driver is not random noise only. It is derived primarily from:
+- the BFPME score,
+- the BFPME risk class,
+- the model type (creation vs extension),
+- a small random shock to avoid deterministic rows.
+
+Business meaning:
+- better BFPME score -> lower latent risk
+- worse BFPME class -> higher latent risk
+- creation projects are slightly riskier on average than extension projects
+
+Then, almost all new variables are generated conditionally on this hidden profile.
+This makes the dataset coherent:
+- stronger firms tend to have better liquidity, governance, guarantees, repayment behavior
+- weaker firms tend to have worse payment behavior, higher leverage, weaker market position
+
+
+2. ORIGINAL BFPME VARIABLES KEPT IN THE DATASET
+===============================================
+
+Base identifiers
+----------------
+- dossier_id: unique synthetic dossier identifier
+- code_modele: BFPME scoring model code
+  - 1 = projet en creation
+  - 2 = projet en extension
+- risk_class: original BFPME risk class from the base synthetic dataset
+
+Original BFPME scores
+---------------------
+- score_bfpme_good: score under the "good" scenario from the original synthetic dataset
+- score_bfpme_average: score under the "average" scenario from the original synthetic dataset
+
+Derived BFPME score features
+----------------------------
+- score_bfpme_global:
+  selected global BFPME score used as a feature
+  - if code_modele = 1 -> score_bfpme_average
+  - if code_modele = 2 -> score_bfpme_good
+
+- score_bfpme_gap:
+  difference between score_bfpme_good and score_bfpme_average
+  useful as a proxy for score sensitivity or uncertainty
+
+- bfpme_risk_index:
+  numerical mapping of BFPME class into a risk scale
+  - Excellent = 0.08
+  - Bon = 0.22
+  - Moyen = 0.45
+  - Risque = 0.68
+  - Tres_Risque = 0.85
+  - Rejete = 0.97
+
+Original sub-factors
+--------------------
+- SF_1 ... SF_62:
+  original BFPME sub-factor columns copied from the base synthetic dataset.
+  They preserve the scorecard structure and can be reused for rule-based or ML analysis.
+
+
+3. BFPME-RELATED SYNTHETIC ENRICHMENTS
+======================================
+
+- score_financier_bfpme:
+  proxy of the BFPME financial factor score
+
+- score_business_bfpme:
+  proxy of the BFPME business factor score
+
+- score_management_bfpme:
+  proxy of the BFPME management factor score
+
+- score_industrie_bfpme:
+  proxy of the BFPME industry factor score
+
+Why these were created:
+- to have more granular BFPME-style information,
+- to let future models use both total score and score decomposition,
+- to mimic how banks often keep factor-level score contributions.
+
+- variation_score_12m:
+  synthetic 12-month change in BFPME score
+
+- tendance_score:
+  categorical trend derived from variation_score_12m:
+  - amelioration
+  - stable
+  - degradation
+
+Business logic:
+- better quality firms tend to improve or remain stable,
+- weaker firms more often degrade.
+
+
+4. BUSINESS IDENTITY AND FIRM PROFILE VARIABLES
+===============================================
+
+- structure_juridique:
+  legal form of the firm
+  possible values:
+  - SARL
+  - SA
+  - Entreprise_individuelle
+
+Logic:
+- stronger profiles are somewhat more likely to be SARL or SA
+- weaker profiles are more likely to be Entreprise_individuelle
+
+- capital_social:
+  synthetic paid-in capital
+
+Logic:
+- increases with latent quality
+- SA firms tend to have higher capital
+
+- associes_dominants_pct:
+  concentration of ownership among dominant shareholders
+
+Logic:
+- higher latent risk tends to produce more concentrated ownership
+
+- nombre_employes:
+  synthetic employee count
+
+Logic:
+- higher quality firms tend to be larger
+
+- classification_pme:
+  SME class derived from employee count
+  - micro
+  - petite
+  - moyenne
+
+- chiffre_affaires_annuel:
+  synthetic annual revenue
+
+Logic:
+- depends on employee count, capital, and latent quality
+
+- part_marche_estimee_pct:
+  estimated market share
+
+Logic:
+- stronger firms tend to have larger market share
+
+- niveau_concurrence_local:
+  local competition level
+  - faible
+  - moyenne
+  - forte
+  - tres_forte
+
+Logic:
+- weaker firms are more likely to face stronger local competition
+
+- dependance_client_unique_pct:
+  dependence on one key client as share of revenue
+
+Logic:
+- weaker firms are more concentrated and therefore more dependent on a single client
+
+
+5. GOVERNANCE AND LOCATION VARIABLES
+====================================
+
+- existence_dirigeants_multiples:
+  binary indicator showing whether governance is shared among multiple leaders
+
+Logic:
+- stronger firms are more likely to have more structured governance
+
+- experience_dirigeant_principal:
+  experience of main executive in years
+
+Logic:
+- higher quality firms tend to have more experienced leadership
+
+- turnover_direction_3ans:
+  management turnover over the past 3 years
+
+Logic:
+- higher risk firms tend to have higher management instability
+
+- zone_localisation:
+  location type
+  - urbaine
+  - industrielle
+  - rurale
+
+- acces_infrastructures_score:
+  infrastructure access score from 1 to 5
+
+Logic:
+- stronger firms are more likely to operate in better-served areas
+
+
+6. CREDIT STRUCTURE VARIABLES
+=============================
+
+- objectif_credit:
+  purpose of the loan
+  - investissement
+  - exploitation
+  - expansion
+
+Logic:
+- creation projects are more likely to be investissement
+- extension projects are more likely to be expansion
+
+- type_credit:
+  synthetic term type
+  - court_terme
+  - moyen_terme
+  - long_terme
+
+Logic:
+- depends on loan purpose
+
+- duree_mois:
+  numerical duration in months
+
+- duree_credit:
+  bucketed duration based on duree_mois
+
+- montant_total_investissement:
+  total investment size of the project
+
+Logic:
+- linked to revenue, model type, and scale of business
+
+- apport_personnel:
+  personal or sponsor contribution
+
+Logic:
+- stronger firms tend to contribute more own funds
+
+- cofinancement:
+  binary indicator for co-financing
+
+Logic:
+- stronger firms are more likely to attract co-financing
+
+- credit_rattache:
+  binary indicator of associated or linked credit
+
+Logic:
+- slightly more frequent in riskier profiles
+
+- montant_pret:
+  synthetic loan amount
+
+Logic:
+- total investment minus personal contribution and co-financing
+
+
+7. GUARANTEE VARIABLES
+======================
+
+- garantie_type:
+  type of collateral
+  - hypotheque
+  - caution_personnelle
+  - garantie_bancaire
+  - nantissement
+
+- garantie_valeur:
+  estimated collateral value
+
+- garantie_liquidite:
+  ease of collateral liquidation
+  - facile
+  - moyenne
+  - difficile
+
+- garantie_decote_pct:
+  haircut applied to collateral
+
+Logic:
+- guarantee structure depends on business quality and guarantee type
+- better firms tend to get stronger and more liquid collateral structures
+- haircuts differ by guarantee type
+
+
+8. CREDIT PRICING VARIABLES
+===========================
+
+- taux_interet_effectif_reel:
+  effective real interest rate
+
+Logic:
+- depends on base rate and latent risk
+
+- frais_annexes:
+  additional fees
+
+- teg:
+  total effective rate proxy
+
+- cout_credit:
+  estimated total cost of the credit
+
+- sensibilite_taux:
+  type of rate sensitivity
+  - fixe
+  - variable
+  - mixte
+
+Logic:
+- more stressful macro conditions allow more variable or mixed sensitivity
+
+
+9. FINANCIAL STATEMENT VARIABLES
+================================
+
+Balance sheet structure
+-----------------------
+- capitaux_propres: equity
+- dettes_court_terme: short-term debt
+- dettes_long_terme: long-term debt
+- fdr: fonds de roulement
+- bfr: besoin en fonds de roulement
+- cash_equivalents: cash and cash equivalents
+- actifs_courants: current assets
+- passifs_courants: current liabilities
+- stock: inventory
+- total_bilan: total assets / balance-sheet size
+
+Logic:
+- higher quality firms tend to have stronger equity and more balanced structure
+- weaker firms tend to have more strained liquidity and higher debt burden
+
+Profitability
+-------------
+- ebitda
+- resultat_net
+- marge_brute_pct
+- marge_nette_pct
+- roa_pct
+- roe_pct
+
+Logic:
+- profitability improves with latent quality
+- weak profiles can generate low or even negative net results
+
+Cash flow
+---------
+- cashflow_operationnel
+- cashflow_libre
+- cashflow_cumule
+- service_dette_annuel
+
+Logic:
+- stronger firms generate stronger cash flow and better debt service capacity
+
+Other financing-related variables
+---------------------------------
+- historique_acces_credit:
+  proxy of historical access to credit
+
+- montant_subventionne:
+  subsidized part of the investment
+
+Logic:
+- stronger profiles tend to have better access to credit and slightly higher chance of support
+
+
+10. DERIVED FINANCIAL RATIOS
+============================
+
+- ratio_fdr_bfr:
+  FDR / BFR ratio
+
+- ratio_liquidite_generale:
+  current ratio = actifs_courants / passifs_courants
+
+- quick_ratio:
+  immediate liquidity ratio excluding inventory
+
+- debt_to_equity_ratio:
+  leverage ratio
+
+- dscr:
+  debt service coverage ratio
+
+- interets_sur_ebitda:
+  interest burden relative to EBITDA
+
+- garantie_coverage_ratio:
+  collateral value / loan amount
+
+- apport_ratio:
+  personal contribution / total investment
+
+- ratio_cout_credit:
+  total credit cost / loan amount
+
+Why these ratios matter:
+- they are standard credit-risk indicators
+- they create meaningful numerical signals for classification models
+- they align with how banks assess solvency, liquidity, leverage, and protection
+
+
+11. PAYMENT BEHAVIOR AND BANK RELATIONSHIP VARIABLES
+====================================================
+
+- qualite_gestion_compte:
+  internal quality proxy for account management
+
+- historique_paiement:
+  categorical payment history quality
+  - excellent
+  - acceptable
+  - fragile
+  - degrade
+
+- retards_eventuels:
+  binary indicator of material delays
+
+- relation_bancaire:
+  overall bank relationship score
+
+- dpd_moyen:
+  average days past due
+
+- dpd_max_historique:
+  maximum historical DPD
+
+- frequence_retards:
+  frequency of payment delays
+
+- montant_impayes:
+  unpaid amount
+
+- respect_echeances:
+  repayment discipline percentage
+
+- taux_remboursement_ponctuel:
+  on-time repayment rate
+
+- reamenagements_dettes:
+  count/proxy of debt restructurings
+
+- nombre_credits_actifs:
+  number of active credits
+
+- utilisation_lignes_credit_pct:
+  share of credit lines utilized
+
+- decouverts_frequents:
+  binary overdraft frequency indicator
+
+- augmentation_brutale_dettes:
+  binary stress indicator for sudden debt increase
+
+- baisse_depots:
+  binary stress indicator for falling deposits
+
+- retrait_liquidites_frequent:
+  binary stress indicator for frequent withdrawals
+
+- confiance_institutionnelle:
+  internal institutional trust score
+
+- qualite_communication_banque:
+  communication quality score with the bank
+
+- historique_litiges:
+  proxy count of disputes/litigation issues
+
+Business logic:
+- risky firms have higher DPD, more unpaid amounts, weaker repayment discipline,
+  lower trust, worse relationship quality, and more signs of stress
+
+
+12. MACROECONOMIC VARIABLES
+===========================
+
+- scenario_macro:
+  simulated macro scenario
+  - base
+  - adverse
+  - severe
+
+- inflation
+- taux_directeur
+- croissance_pib
+- taux_chomage
+- risque_sectoriel_global
+- risque_pays_region
+- choc_economique
+
+Business logic:
+- scenarios shift the environment around the borrower
+- adverse and severe scenarios worsen sector and country risk
+- these variables influence the final synthetic default probability
+
+
+13. TARGET VARIABLES
+====================
+
+- pd_target:
+  synthetic default probability between 0 and 1
+
+- default_flag:
+  binary target for classification
+  generated by drawing a Bernoulli event from pd_target
+  - 1 = default
+  - 0 = non-default
+
+Important modeling note:
+- for binary classification, use default_flag as the target
+- do not use pd_target as an input feature, because it directly leaks the target logic
+
+
+14. HOW pd_target WAS CONSTRUCTED
+=================================
+
+The synthetic probability of default was generated from a latent default score.
+
+Variables increasing default risk
+---------------------------------
+- low BFPME score
+- poor BFPME class
+- higher dpd_moyen
+- high leverage (debt_to_equity_ratio)
+- weak debt service capacity (low dscr)
+- poor payment behavior
+- debt restructurings
+- sudden debt increase
+- deposit decrease
+- adverse macro conditions
+- higher sector/country stress
+
+Variables reducing default risk
+-------------------------------
+- higher liquidity ratios
+- stronger collateral coverage
+- better on-time repayment rate
+- stronger institutional confidence
+
+Then the latent score is transformed with a sigmoid function to obtain:
+- pd_target in [0, 1]
+
+Finally:
+- default_flag is sampled from pd_target
+
+
+15. WHY THIS DATASET IS BUSINESS-CONSISTENT
+===========================================
+
+This dataset was intentionally built to avoid purely random independent columns.
+Instead, most variables are linked through a hidden business profile.
+
+Examples of coherence:
+- a good borrower tends to have:
+  - better BFPME score
+  - higher equity
+  - better liquidity
+  - lower DPD
+  - stronger guarantees
+  - better governance
+  - better repayment discipline
+
+- a weak borrower tends to have:
+  - lower BFPME score
+  - higher leverage
+  - worse DPD
+  - more stress signals
+  - weaker guarantees
+  - lower institutional trust
+
+This makes the dataset more realistic for:
+- preprocessing,
+- feature selection,
+- model training,
+- binary classification experiments,
+- explainability exercises.
+
+
+16. RECOMMENDED MODELING USAGE
+==============================
+
+Recommended target:
+- default_flag
+
+Recommended exclusions from model inputs:
+- pd_target
+
+Optional exclusions depending on objective:
+- risk_class, if you want to avoid too much direct rule-based leakage
+- score_bfpme_global, if you want a model independent from BFPME
+
+Recommended first use cases:
+- Logistic Regression
+- Random Forest
+- XGBoost / Gradient Boosting
+
+Recommended first checks:
+- class balance
+- missing values
+- categorical encoding
+- target leakage review
+- calibration and ROC/AUC evaluation
+
+
+17. FINAL INTERPRETATION
+========================
+
+This dataset is not a regulatory or accounting-grade IFRS 9 production dataset.
+It is a synthetic, business-driven prototype dataset designed to:
+- show project value,
+- support a proof of concept,
+- compare classification models,
+- prepare later transition toward real PD/default data.
+

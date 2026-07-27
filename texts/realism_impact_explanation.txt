@@ -1,0 +1,98 @@
+Why performance became more realistic after realism modifications
+=================================================================
+
+Observed metrics (Option A, realism v2):
+- RandomForest: accuracy=0.765, precision=0.829, recall=0.782, f1=0.805, auc=0.820
+- XGBoost:      accuracy=0.745, precision=0.783, recall=0.815, f1=0.798, auc=0.802
+
+These results are better for a realistic project than the previous near-perfect scores.
+
+
+1) What happened before (why scores were too high)
+--------------------------------------------------
+In the first synthetic version:
+- the target was generated with a latent formula strongly tied to a few dominant variables
+  (especially score_bfpme_global and dpd-like behavior variables),
+- there was limited randomness,
+- train/test split was random, so train and test had very similar distributions.
+
+Result:
+- models could recover the target logic almost directly,
+- metrics were artificially high (AUC close to 0.99), which is uncommon in real credit risk data.
+
+
+2) What changed in realism v2
+-----------------------------
+
+2.1 Added stochasticity/noise
+- A stronger random component was added to latent target generation.
+- This increases irreducible uncertainty (real life always has unknown factors).
+
+Effect:
+- the same input profile no longer maps to almost deterministic output,
+- model discrimination decreases to more realistic levels.
+
+
+2.2 Reduced dominance of top predictors
+- We lowered the relative weight of dominant variables (score_bfpme_global, dpd),
+  and spread risk signal over more features (macro, leverage, dscr, stress, protections).
+
+Effect:
+- model cannot rely on one or two “shortcut” features,
+- learning becomes harder but more representative of operational reality.
+
+
+2.3 Injected realistic contradictions
+- We introduced counter-intuitive cases:
+  - some good dossiers default,
+  - some risky dossiers survive.
+
+Effect:
+- this breaks deterministic patterns,
+- forces models to handle overlap between classes (common in real portfolios),
+- reduces overconfident separation.
+
+
+2.4 Moved from random split to temporal split
+- Train = older dossiers, Test = newer dossiers.
+- This introduces natural distribution shift (time drift).
+
+Effect:
+- evaluation is stricter and closer to production use,
+- performance drops compared to random split, but credibility increases.
+
+
+3) Why the new metrics are “better” for credibility
+---------------------------------------------------
+- AUC around 0.80-0.82 is plausible for many real risk settings.
+- Precision/recall trade-offs look realistic:
+  - RandomForest has slightly better precision,
+  - XGBoost has slightly better recall.
+- The gap between models is now modest, which is common in practical deployments.
+
+So, lower metrics here do not mean the project got worse.
+They mean the evaluation setting became more realistic and more trustworthy.
+
+
+4) Practical interpretation for BFPME/client presentation
+---------------------------------------------------------
+Main message:
+- v1 validated technical pipeline consistency,
+- v2 validated robustness under more realistic assumptions.
+
+What to highlight:
+- model performance remains solid after realism stress,
+- the methodology is now more defensible for next phases,
+- temporal validation and contradiction handling improve credibility before real-data migration.
+
+
+5) Next recommended step
+------------------------
+Use the v2 temporal exports as default training source:
+- X_train_temporal_v2.csv
+- X_test_temporal_v2.csv
+- y_train_temporal_v2.csv
+- y_test_temporal_v2.csv
+
+Then compare Option A/B/C again on this same realistic base to select the best governance strategy.
+

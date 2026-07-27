@@ -1,0 +1,36 @@
+# ── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# ── Dépendances pip vendorisées localement (pas le projet) ─
+tmp_pip/
+
+# ── Environnement / secrets (garder les .env.example) ─────
+.env
+*.env
+!*.env.example
+
+# ── Artefacts de compilation LaTeX ────────────────────────
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.bbl
+*.blg
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.run.xml
+*.bcf
+
+# ── OS / éditeurs ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp

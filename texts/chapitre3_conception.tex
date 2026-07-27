@@ -1,0 +1,598 @@
+% ============================================================
+%  CHAPITRE 3 — CONCEPTION ET ARCHITECTURE DE LA SOLUTION
+%  Version détaillée, alignée sur la structure réelle du projet BFPME
+%  (FastAPI · Option C RandomForest/XGBoost · SHAP · LLM Ollama ·
+%   Monte Carlo · IFRS 9)
+%
+%  Ce fichier est COMPILABLE seul (preamble minimal identique au
+%  rapport principal). Pour l'intégrer au rapport, supprimer le
+%  preamble + \begin{document}/\end{document} et conserver à partir
+%  de \chapter{Conception et architecture de la solution}.
+%
+%  NB : les diagrammes UML existants ne sont PAS modifiés ; ils sont
+%  simplement référencés via \includegraphics (placeholders).
+% ============================================================
+\documentclass[a4paper,12pt,oneside]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm]{geometry}
+\usepackage{setspace}\onehalfspacing
+\usepackage{lmodern}\usepackage{microtype}
+\usepackage[dvipsnames,svgnames,table]{xcolor}
+\definecolor{EspritRed}{RGB}{180, 0, 0}
+\definecolor{DarkGray}{RGB}{50, 50, 50}
+\usepackage{graphicx}\usepackage{tikz}\usepackage{pgffor}
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+  {\normalfont\centering}
+  {\rule{\linewidth}{2pt}\\[6pt]{\large\bfseries CHAPITRE \thechapter}\\\rule{\linewidth}{1pt}}
+  {12pt}{\Huge\bfseries\MakeUppercase}[\vspace{4pt}\rule{\linewidth}{0pt}]
+\titlespacing*{\chapter}{0pt}{-30pt}{40pt}
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+\titlespacing*{\section}{0pt}{16pt}{8pt}
+\titlespacing*{\subsection}{0pt}{14pt}{6pt}
+\titlespacing*{\subsubsection}{0pt}{10pt}{4pt}
+\usepackage{fancyhdr}\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\textit{\leftmark}}\fancyhead[R]{\small PFE 2024--2025}
+\fancyfoot[C]{\thepage}\renewcommand{\headrulewidth}{0.4pt}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=black]{hyperref}
+\usepackage{booktabs}\usepackage{tabularx}\usepackage{longtable}
+\usepackage{multirow}\usepackage{array}\usepackage{enumitem}
+\setlist[itemize,1]{label=\textbullet, leftmargin=2em}
+\setlist[itemize,2]{label=---, leftmargin=3em}
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\footnotesize, breaklines=true, frame=single,
+  backgroundcolor=\color{gray!10},
+  numbers=left, numberstyle=\tiny\color{gray}, numbersep=5pt,
+  keywordstyle=\bfseries\color{EspritRed}, commentstyle=\itshape\color{gray},
+  captionpos=b
+}
+\usepackage{amsmath, amssymb}
+\usepackage{caption}\usepackage{subcaption}
+\captionsetup{labelsep=endash, font=small, labelfont=bf, justification=centering}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\begin{document}
+\setcounter{chapter}{2} % => ce chapitre sera numéroté « CHAPITRE 3 »
+
+% ════════════════════════════════════════════════════════════
+\chapter{Conception et architecture de la solution}
+
+\section*{Introduction}
+
+Après avoir posé, dans les chapitres précédents, le cadre métier du financement
+des PME et le socle scientifique du projet, ce troisième chapitre est consacré à
+la \textbf{conception et à l'architecture technique} de la plateforme effectivement
+réalisée. Il fait le pont entre les besoins exprimés et l'implémentation : il décrit
+l'architecture logique multi-couches, la structure concrète du projet (organisation
+du code), les choix technologiques retenus, la conception des données, l'architecture
+de l'API et des services métier, l'orchestration de l'agent IA, le module
+d'explicabilité, le moteur de simulation Monte Carlo, la modélisation UML, ainsi
+que la planification des sprints et des releases.
+
+L'objectif de ce chapitre est double : justifier les décisions d'architecture au
+regard des exigences fonctionnelles et non fonctionnelles (performance, modularité,
+auditabilité, explicabilité), et fournir une vue suffisamment précise du système
+pour en garantir la reproductibilité et la maintenabilité.
+
+% ────────────────────────────────────────────────────────────
+\section{Vision architecturale globale}
+
+\subsection{Présentation générale de la plateforme}
+
+La plateforme est conçue selon une \textbf{architecture modulaire en couches}, qui
+sépare strictement les responsabilités : ingestion et validation des données,
+prédiction de la probabilité de défaut (PD), explicabilité (SHAP), simulation de
+scénarios et de stress (Monte~Carlo), orchestration décisionnelle et interaction en
+langage naturel. Cette séparation des préoccupations
+(\textit{separation of concerns}) répond directement aux exigences non
+fonctionnelles de maintenabilité et d'évolutivité formulées au chapitre~1 : chaque
+composant peut être testé, remplacé ou retraîné indépendamment des autres.
+
+Le système est structuré autour de trois grands ensembles :
+
+\begin{itemize}
+  \item un \textbf{backend applicatif} exposant une API REST (FastAPI), qui
+        orchestre la chaîne validation $\rightarrow$ prédiction $\rightarrow$
+        explication $\rightarrow$ scénario $\rightarrow$ synthèse en langage naturel ;
+  \item un \textbf{noyau analytique} (artefact de modèle sérialisé, moteur SHAP,
+        moteur Monte~Carlo, ingénierie de variables) découplé de la couche HTTP ;
+  \item une \textbf{interface analyste} (tableau de bord web statique) consommant
+        l'API et restituant prédictions, explications et simulations sous forme
+        graphique.
+\end{itemize}
+
+\subsection{Architecture logique multi-couches}
+
+L'architecture s'organise en \textbf{cinq couches} complémentaires, chacune assurant
+une fonction précise du pipeline décisionnel. La figure~\ref{fig:archi_couches}
+en présente la vue d'ensemble.
+
+\begin{figure}[h!]
+  \centering
+  % Remplacer par votre schéma d'architecture existant (non modifié)
+  \includegraphics[width=0.95\textwidth]{architecture_multicouches}
+  \caption{Architecture logique multi-couches de la plateforme}
+  \label{fig:archi_couches}
+\end{figure}
+
+\subsubsection{Couche collecte et ingestion des données}
+
+Cette couche centralise l'acquisition, la \textbf{validation} et le formatage des
+données du dossier de crédit PME en provenance des systèmes de la banque. Le service
+de validation (\texttt{validation\_service}) vérifie la présence des variables
+attendues par le modèle, signale les champs manquants (qui seront imputés) et les
+champs non utilisés, sans jamais bloquer la chaîne : la robustesse prime, les
+manques étant gérés en aval par imputation.
+
+\subsubsection{Couche modélisation et prédiction}
+
+Elle héberge l'artefact entraîné (préprocesseur + modèle) chargé et mis en cache au
+démarrage, et expose l'estimation de la PD pour chaque dossier soumis. C'est le
+c\oe ur prédictif : application de l'ingénierie de variables, transformation par le
+préprocesseur, puis \texttt{predict\_proba} et classement du risque
+(\textit{low / medium / high}).
+
+\subsubsection{Couche explicabilité et traçabilité}
+
+Elle calcule les contributions \textbf{SHAP} (\texttt{TreeExplainer}) sur la matrice
+de variables transformées et restitue, pour chaque prédiction, les facteurs qui
+augmentent ou diminuent le risque. Chaque explication est structurée (valeur de base,
+contributions ordonnées, direction) pour être auditable.
+
+\subsubsection{Couche agent IA et orchestration}
+
+Elle coordonne l'enchaînement des traitements (validation, prédiction, explication,
+scénario), applique les seuils de confiance et gère la composition des résultats en
+une réponse unique. C'est le niveau qui matérialise la logique d'\textit{agent} :
+décider quels outils invoquer en fonction de la requête de l'analyste.
+
+\subsubsection{Couche interaction LLM et interface analyste}
+
+Elle expose une interface conversationnelle permettant aux analystes d'interroger le
+système en langage naturel. Un grand modèle de langage (LLM) reçoit \textbf{uniquement}
+les sorties calculées par les couches précédentes et produit une synthèse narrative,
+sans jamais recalculer ni inventer de valeur numérique.
+
+\subsection{Flux de données et interactions entre composants}
+
+Les composants communiquent via des interfaces standardisées (modèles Pydantic
+typés). Le flux nominal, depuis la soumission d'un dossier jusqu'à la restitution
+d'une explication narrative, garantit la cohérence et la traçabilité de bout en bout.
+La figure~\ref{fig:flux_donnees} en donne la représentation.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.9\textwidth]{flux_donnees}
+  \caption{Flux de données de bout en bout du pipeline décisionnel}
+  \label{fig:flux_donnees}
+\end{figure}
+
+% ────────────────────────────────────────────────────────────
+\section{Structure du projet}
+
+L'organisation du dépôt traduit directement l'architecture en couches : le backend
+applicatif est isolé du noyau de données, des notebooks de modélisation et du module
+réglementaire IFRS~9. Le listing~\ref{lst:arbo} présente l'arborescence simplifiée
+du projet.
+
+\begin{lstlisting}[caption={Arborescence simplifiée du projet}, label={lst:arbo}]
+BFPME/
++-- backend/
+|   +-- app/
+|   |   +-- main.py            # App FastAPI, montage des routers + frontend
+|   |   +-- config.py          # Configuration Pydantic (variables .env)
+|   |   +-- schemas.py         # Modeles de requete/reponse (Pydantic)
+|   |   +-- routers/           # Un fichier par groupe d'endpoints
+|   |   |   +-- health.py        validation.py   prediction.py
+|   |   |   +-- explain.py       scenario.py     monte_carlo.py
+|   |   |   +-- metadata.py      chat.py
+|   |   +-- services/          # Logique metier decouplee du HTTP
+|   |       +-- artifacts.py          # Chargement/cache de l'artefact joblib
+|   |       +-- model_service.py      # Feature engineering + predict_proba
+|   |       +-- shap_service.py       # TreeExplainer SHAP
+|   |       +-- scenario_service.py   # PD baseline vs. modifiee (delta_pd)
+|   |       +-- monte_carlo_service.py# Stress test stochastique vectorise
+|   |       +-- llm_service.py        # Appel async httpx vers Ollama
+|   |       +-- feature_engineering.py# Ratios derives a l'inference
+|   |       +-- validation_service.py # Controle des features
+|   |       +-- eda_service.py        # Resume exploratoire du dataset
+|   +-- requirements.txt
+|   +-- .env / .env.example
++-- frontend/                  # Tableau de bord statique (HTML/CSS/JS)
+|   +-- index.html  app.js  styles.css
++-- data/                      # Datasets + artefacts modeles (.joblib, .json)
++-- scripts/                   # Entrainement, generation de donnees, IFRS9
+|   +-- train_option_c_xgboost.py
+|   +-- train_option_c_randomforest.py
++-- notebook/                  # Notebooks de modelisation (Options A/B/C)
++-- dataset_IFRS9/             # Tables IFRS9 (PD/LGD/EAD/discount/exposure)
++-- notebook_ifrs/             # Notebooks et synthese ECL
++-- texts/                     # Rapports, dictionnaire de variables
+\end{lstlisting}
+
+Ce découpage applique le principe de \textbf{séparation entre la couche HTTP et la
+logique métier} : les fichiers de \texttt{routers/} ne contiennent que la déclaration
+des points d'entrée et la validation des entrées/sorties, tandis que toute la logique
+analytique réside dans \texttt{services/}. Un service peut ainsi être réutilisé par
+plusieurs endpoints (par exemple \texttt{model\_service.predict} est appelé à la fois
+par \texttt{/predict}, \texttt{/scenario} et \texttt{/chat/analyze}).
+
+% ────────────────────────────────────────────────────────────
+\section{Choix technologiques et environnement de développement}
+
+Le tableau~\ref{tab:techno} récapitule la pile technologique retenue et la
+justification de chaque choix au regard des besoins du projet.
+
+\begin{table}[h!]
+\centering
+\caption{Pile technologique de la plateforme}
+\label{tab:techno}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l l Y@{}}
+\toprule
+\textbf{Domaine} & \textbf{Technologie} & \textbf{Justification} \\
+\midrule
+Langage         & Python 3            & Écosystème data science / ML mature \\
+API REST        & FastAPI + Uvicorn   & Asynchrone, typage natif, OpenAPI/Swagger auto \\
+Validation      & Pydantic v2         & Schémas typés, configuration par variables d'env. \\
+ML --- arbres   & XGBoost, scikit-learn (RandomForest) & Modèles ensemblistes performants \\
+Prétraitement   & scikit-learn        & \texttt{ColumnTransformer}, encodeurs, scalers \\
+Explicabilité   & SHAP (\texttt{TreeExplainer}) & Explications cohérentes globales et locales \\
+Sérialisation   & joblib              & Persistance préprocesseur + modèle \\
+LLM             & Ollama (API compatible OpenAI) & Inférence locale, souveraineté des données \\
+Client HTTP     & httpx (async)       & Appels non bloquants vers le LLM \\
+Frontend        & HTML/CSS/JS, Chart.js & Tableau de bord sans étape de build \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Configuration par variables d'environnement}
+
+Toute la configuration (chemins des artefacts, seuil de décision, activation et
+paramétrage du LLM, hôte/port) est centralisée dans \texttt{config.py} via
+\texttt{BaseSettings} de Pydantic, alimentée par un fichier \texttt{.env}. Ce
+mécanisme découple le code de l'infrastructure : il permet de basculer de modèle
+(RandomForest $\leftrightarrow$ XGBoost), d'activer ou non le LLM, ou de durcir le
+seuil de décision sans modifier le code.
+
+\begin{lstlisting}[caption={Extrait de configuration (.env)}, label={lst:env}]
+MODEL_ARTIFACT_PATH=d:/BFPME/data/option_c_randomforest_model.joblib
+MODEL_METRICS_PATH=d:/BFPME/data/option_c_randomforest_metrics.json
+DEFAULT_THRESHOLD=0.5            # PD >= seuil => defaut predit
+LLM_ENABLED=true
+LLM_BASE_URL=http://127.0.0.1:11434/v1   # Ollama
+LLM_MODEL=qwen2.5:7b
+LLM_MAX_TOKENS=500
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────────
+\section{Conception des données}
+
+\subsection{Sources et nature des données bancaires}
+
+Les données proviennent des dossiers de crédit PME : informations signalétiques de
+l'entreprise (ancienneté, secteur, région, structure juridique, classification PME,
+effectif), états financiers (chiffre d'affaires, total actif/passif, capitaux
+propres, dettes court et long terme, fonds de roulement, BFR, trésorerie), variables
+de crédit (montant du prêt, durée, type de crédit, objectif, type de taux, valeur des
+garanties), variables comportementales (retards de paiement, impayés) et variables
+de scoring interne BFPME. La variable cible est \texttt{default\_flag} (défaut /
+non-défaut).
+
+Conformément au cadre du projet, le jeu de données exploité
+(\texttt{final\_dataset.csv}) est \textbf{synthétique} mais métier-cohérent : il est
+généré à partir d'un \textit{driver} latent de risque dérivé du score BFPME, de la
+classe de risque et du type de projet (création / extension), de sorte que les
+variables financières, comportementales et de garantie restent corrélées de façon
+réaliste. Il sert de support de prototypage, de comparaison de modèles et
+d'ingénierie de variables.
+
+\subsection{Modèle de données et entités principales}
+
+Le modèle de données structure les entités centrales du domaine du crédit PME et
+leurs relations. La figure~\ref{fig:classes_donnees} (diagramme de classes, non
+modifié) en formalise la structure ; les entités principales sont :
+
+\begin{itemize}
+  \item \textbf{Entreprise / PME} : caractéristiques signalétiques et financières du
+        demandeur ;
+  \item \textbf{Dossier de crédit} : montant, durée, type, objectif, garanties ;
+  \item \textbf{Décision} : PD estimée, classe de risque, seuil appliqué, explication
+        associée ;
+  \item \textbf{Exposition IFRS~9} : paramètres PD / LGD / EAD et résultats ECL
+        (module réglementaire).
+\end{itemize}
+
+\subsection{Pipeline de prétraitement (artefact joblib)}
+
+Le préprocesseur et le modèle sont entraînés conjointement puis sérialisés dans un
+\textbf{unique artefact joblib} contenant : le \texttt{preprocessor}
+(\texttt{ColumnTransformer} ajusté), le \texttt{model} entraîné et la liste
+\texttt{allowed\_columns} des colonnes attendues. Le préprocesseur applique, selon le
+type de variable, la chaîne suivante :
+
+\begin{enumerate}
+  \item \textbf{Variables numériques sensibles aux valeurs extrêmes} : imputation par
+        la médiane $\rightarrow$ \textbf{Winsorisation} (écrêtage aux centiles 1 et 99)
+        $\rightarrow$ \textbf{standardisation} ;
+  \item \textbf{Variables numériques simples} : imputation médiane $\rightarrow$
+        standardisation ;
+  \item \textbf{Variables ordinales} (ex. durée de crédit) : imputation par mode
+        $\rightarrow$ \texttt{OrdinalEncoder} avec ordre métier explicite ;
+  \item \textbf{Variables nominales} (secteur, région, structure juridique, type de
+        crédit, scénario économique, \dots) : imputation par mode $\rightarrow$
+        \texttt{OneHotEncoder} (\texttt{handle\_unknown=ignore}).
+\end{enumerate}
+
+Ce découpage par type de variable, encapsulé dans un \texttt{ColumnTransformer},
+porte la dimensionnalité de \textbf{52~variables brutes à 80~variables transformées}.
+La figure~\ref{fig:pipeline_prepro} en illustre le déroulé.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.95\textwidth]{pipeline_preprocessing}
+  \caption{Pipeline de prétraitement sérialisé dans l'artefact joblib}
+  \label{fig:pipeline_prepro}
+\end{figure}
+
+\subsection{Ingénierie de variables à l'inférence}
+
+Un choix de conception déterminant consiste à appliquer l'\textbf{ingénierie de
+variables avant le préprocesseur, à l'inférence}, et non à la figer dans l'artefact.
+Le service \texttt{feature\_engineering} dérive à la volée des ratios métier
+discriminants à partir des champs bruts du dossier, par exemple :
+
+\[
+\text{loan\_to\_revenue} = \frac{\text{montant\_pret}}{\text{chiffre\_affaires\_annuel}},
+\qquad
+\text{cash\_to\_debt} = \frac{\text{tresorerie\_disponible}}{\text{dette\_totale}}
+\]
+\[
+\text{payment\_stress\_index} =
+\mathrm{clip}\!\left(\tfrac{\text{retards\_jours}}{90},0,3\right) +
+\mathrm{clip}\!\left(\text{impayes\_to\_loan},0,3\right),
+\qquad
+\text{garantie\_to\_loan} = \frac{\text{valeur\_garanties}}{\text{montant\_pret}}
+\]
+
+D'autres ratios sont calculés selon la même logique (\texttt{debt\_total},
+\texttt{impayes\_to\_loan}, \texttt{fdr\_bfr\_pressure},
+\texttt{financement\_externe\_intensity}). Cette approche garantit que la
+\textbf{même logique de dérivation} est appliquée à l'entraînement, à la prédiction
+unitaire, au scénario et à la simulation Monte~Carlo, évitant toute dérive entre
+apprentissage et production.
+
+\subsection{Données du module IFRS 9}
+
+Le module IFRS~9, découplé de l'API, s'appuie sur un ensemble de tables structurées
+(\texttt{dataset\_IFRS9/}) : instantané d'exposition, scénarios macro-économiques,
+courbes PD, LGD, EAD et facteur d'actualisation. Le calcul de l'\textit{Expected
+Credit Loss} y est conduit selon :
+\[
+  \mathrm{ECL}_t = \mathrm{PD}_t \times \mathrm{LGD}_t \times \mathrm{EAD}_t \times \mathrm{DF}_t,
+  \qquad
+  \mathrm{ECL}_{\text{pondérée}} = \sum_{s} w_s \times \mathrm{ECL}^{\text{lifetime}}_s
+\]
+où la PD issue de la modélisation prédictive alimente directement le moteur de calcul,
+et où la pondération forward-looking par scénario assure la conformité réglementaire.
+
+% ────────────────────────────────────────────────────────────
+\section{Conception de l'API et des services}
+
+\subsection{Points d'entrée REST}
+
+L'API expose un ensemble cohérent de points d'entrée, chacun associé à un routeur
+dédié. Le tableau~\ref{tab:endpoints} en présente la cartographie.
+
+\begin{table}[h!]
+\centering
+\caption{Cartographie des points d'entrée de l'API}
+\label{tab:endpoints}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l l Y@{}}
+\toprule
+\textbf{Méthode} & \textbf{Endpoint} & \textbf{Rôle} \\
+\midrule
+GET  & \texttt{/health}              & Sonde de disponibilité du service \\
+GET  & \texttt{/metadata/model}      & Métadonnées et métriques du modèle \\
+GET  & \texttt{/metadata/eda}        & Résumé exploratoire du dataset (graphes) \\
+POST & \texttt{/metadata/reload-model} & Rechargement de l'artefact sans redémarrage \\
+POST & \texttt{/validate}            & Contrôle de cohérence du dossier \\
+POST & \texttt{/predict}             & Prédiction de la PD et de la classe de risque \\
+POST & \texttt{/explain}             & Contributions SHAP (top-$k$) \\
+POST & \texttt{/scenario}            & Simulation what-if (PD baseline vs. modifiée) \\
+POST & \texttt{/monte-carlo}         & Test de stress stochastique \\
+POST & \texttt{/chat/analyze}        & Orchestration complète + synthèse LLM \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Cycle de vie de l'artefact}
+
+L'artefact est chargé \textbf{une seule fois} au démarrage de l'application
+(événement \texttt{startup}) et mis en cache en mémoire (\texttt{lru\_cache}). Le
+point d'entrée \texttt{/metadata/reload-model} permet de vider ce cache et de
+recharger le modèle à chaud, sans interruption de service, après un réentraînement.
+Cette conception répond à l'exigence de performance (pas de rechargement disque à
+chaque requête) tout en préservant la maintenabilité opérationnelle.
+
+% ────────────────────────────────────────────────────────────
+\section{Architecture de l'agent IA et orchestration}
+
+\subsection{Pipeline d'orchestration}
+
+Le c\oe ur de l'agent réside dans l'endpoint \texttt{/chat/analyze}, qui orchestre
+les outils analytiques en fonction des indicateurs portés par la requête
+(\texttt{run\_validation}, \texttt{run\_prediction}, \texttt{run\_explanation},
+\texttt{scenario\_changes}). Il compose les résultats dans une structure unique
+\texttt{tool\_results}, puis délègue la rédaction de la synthèse au LLM. La
+figure~\ref{fig:seq_chat} (diagramme de séquence, non modifié) en détaille les
+échanges.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.95\textwidth]{sequence_chat_analyze}
+  \caption{Diagramme de séquence de l'orchestration \texttt{/chat/analyze}}
+  \label{fig:seq_chat}
+\end{figure}
+
+\begin{lstlisting}[caption={Logique d'orchestration (extrait)}, label={lst:orch}]
+if run_validation:  tool_results["validation"]  = validate_features(features)
+if run_prediction:  tool_results["prediction"]  = predict(features, threshold)
+if run_explanation: tool_results["explanation"] = explain_prediction(features, k)
+if scenario_changes: tool_results["scenario"]   = run_scenario(features, changes)
+# synthese narrative deleguee au LLM (si active), sinon sorties brutes
+\end{lstlisting}
+
+\subsection{Seuils de confiance et classes de risque}
+
+L'agent applique un \textbf{seuil de décision} configurable (\texttt{DEFAULT\_THRESHOLD},
+0{,}5 par défaut) : la classe prédite vaut « défaut » dès que la PD dépasse ce seuil.
+Indépendamment, une classe de risque qualitative est attribuée à des fins d'escalade :
+\textit{low} (PD~$<$~0{,}4), \textit{medium} ($0{,}4 \le$~PD~$<$~0{,}7) et
+\textit{high} (PD~$\ge$~0{,}7). Ce double mécanisme — seuil quantitatif et classe
+qualitative — matérialise la logique \textit{human-in-the-loop} : les dossiers à
+risque élevé sont signalés pour escalade vers le comité de crédit, l'IA assistant la
+décision sans s'y substituer.
+
+\subsection{Séparation stricte des rôles modèle / LLM}
+
+Un principe de conception fondamental gouverne l'intégration du LLM : la
+\textbf{séparation stricte des responsabilités}. Le modèle prédictif estime le risque ;
+le LLM se limite à \textbf{expliquer et reformuler} en langage naturel à partir des
+sorties calculées. Le \textit{prompt} système impose explicitement de n'utiliser que
+les sorties fournies et de ne jamais inventer, arrondir ou estimer une valeur
+numérique. L'appel est asynchrone (\texttt{httpx}), à température basse (0{,}1) pour
+limiter la variabilité, et toute défaillance du LLM est \textbf{interceptée} sans
+jamais invalider les résultats déjà calculés — l'analyste reçoit alors les sorties
+brutes du modèle, garantissant la continuité de service.
+
+% ────────────────────────────────────────────────────────────
+\section{Module d'explicabilité SHAP}
+
+Le service d'explicabilité instancie un \texttt{TreeExplainer} (mis en cache) sur le
+modèle entraîné et calcule les valeurs SHAP sur la \textbf{matrice de variables
+transformées}. Pour chaque prédiction, il extrait les $k$ contributions de plus forte
+amplitude, indique pour chacune sa direction (\textit{increase\_risk} /
+\textit{decrease\_risk}) et restitue la valeur de base (\textit{base value}). Cette
+restitution sert à la fois l'explicabilité \textbf{locale} (justification d'une
+décision individuelle) et, par agrégation, l'explicabilité \textbf{globale}
+(importance des variables sur le portefeuille), répondant aux besoins respectifs des
+analystes et des gestionnaires de risque.
+
+% ────────────────────────────────────────────────────────────
+\section{Moteur de simulation Monte Carlo}
+
+Le moteur de stress test génère, à partir d'un client de base et d'un ensemble de
+\textbf{chocs} sur des variables choisies, $N$ scénarios perturbés, puis exécute le
+modèle sur l'ensemble du lot en \textbf{une seule passe vectorisée}
+(un \texttt{transform} + un \texttt{predict\_proba}), ce qui garantit la performance.
+Les chocs sont appliqués aux variables \emph{brutes} (selon une loi normale ou
+uniforme), puis les ratios d'ingénierie sont re-dérivés pour rester cohérents.
+
+La distribution de PD obtenue est synthétisée par des \textbf{indicateurs de risque}
+directement exploitables : moyenne et écart-type, percentiles, \textbf{Value-at-Risk
+à 95~\%} (\textit{VaR}$_{95}$), \textbf{Expected Shortfall} (perte moyenne au-delà de
+la VaR), probabilité de dépassement du seuil, répartition par classe de risque,
+histogramme et scénarios extrêmes. Ces mesures établissent le lien opérationnel avec
+la dimension forward-looking de l'IFRS~9 décrite au chapitre précédent.
+
+% ────────────────────────────────────────────────────────────
+\section{Modélisation UML}
+
+La conception du système a été formalisée à l'aide du langage UML. Les diagrammes
+présentés ci-dessous \textbf{ne sont pas modifiés} et sont repris tels qu'élaborés
+lors de la phase de conception.
+
+\subsection{Diagramme de cas d'utilisation}
+
+Le diagramme de cas d'utilisation (figure~\ref{fig:uc}) identifie les acteurs
+principaux — l'analyste crédit, le gestionnaire de risque et le comité de crédit —
+et leurs interactions avec la plateforme : prédire la PD, expliquer une décision,
+simuler un scénario, lancer un test de stress et dialoguer en langage naturel.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.9\textwidth]{diagramme_cas_utilisation}
+  \caption{Diagramme de cas d'utilisation de la plateforme}
+  \label{fig:uc}
+\end{figure}
+
+\subsection{Diagramme de classes}
+
+Le diagramme de classes (figure~\ref{fig:classes_donnees}) formalise les entités du
+domaine et les composants de service (préprocesseur, modèle, explicateur,
+orchestrateur) ainsi que leurs relations.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.95\textwidth]{diagramme_classes}
+  \caption{Diagramme de classes du système}
+  \label{fig:classes_donnees}
+\end{figure}
+
+\subsection{Diagramme de déploiement}
+
+Le diagramme de déploiement (figure~\ref{fig:deploiement}) situe les n\oe uds
+d'exécution : le serveur applicatif (FastAPI/Uvicorn), le serveur d'inférence LLM
+local (Ollama) et le navigateur client hébergeant le tableau de bord.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.9\textwidth]{diagramme_deploiement}
+  \caption{Diagramme de déploiement de la plateforme}
+  \label{fig:deploiement}
+\end{figure}
+
+% ────────────────────────────────────────────────────────────
+\section{Planification des sprints et des releases}
+
+Conformément au choix méthodologique SCRUM (chapitre~1), le développement a été
+organisé en releases incrémentales, chacune livrant un sous-ensemble cohérent et
+validable de la plateforme. Le tableau~\ref{tab:releases} synthétise cette
+planification.
+
+\begin{table}[h!]
+\centering
+\caption{Planification des releases du projet}
+\label{tab:releases}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l Y l@{}}
+\toprule
+\textbf{Release} & \textbf{Périmètre} & \textbf{Chapitre} \\
+\midrule
+Release~I   & Compréhension métier et ingénierie des données (cycle du crédit, collecte, nettoyage, \textit{feature engineering}) & Ch.~4 \\
+Release~II  & Modélisation prédictive (régression logistique, Random Forest, Gradient Boosting) et explicabilité SHAP & Ch.~5 \\
+Release~III & Agent IA, orchestration décisionnelle et intégration LLM en langage naturel & Ch.~6 \\
+Release~IV  & Tests de stress Monte~Carlo et conformité IFRS~9 (ECL, staging, forward-looking) & Ch.~7 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Chaque release a été clôturée par une revue de sprint avec les parties prenantes de
+MPSoft, suivie d'une rétrospective, garantissant un rythme de livraison régulier et
+une adaptation continue aux retours métier.
+
+% ────────────────────────────────────────────────────────────
+\section*{Conclusion}
+
+Ce chapitre a présenté la conception et l'architecture technique de la plateforme :
+une architecture en cinq couches matérialisée par une structure de projet claire
+séparant la couche HTTP de la logique métier ; une pile technologique (FastAPI,
+scikit-learn/XGBoost, SHAP, Ollama) cohérente avec les exigences de performance,
+d'explicabilité et de souveraineté des données ; une conception des données
+articulant un préprocesseur sérialisé, une ingénierie de variables à l'inférence et
+les tables IFRS~9 ; et une orchestration d'agent IA assurant une séparation stricte
+entre estimation du risque et restitution en langage naturel. La modélisation UML et
+la planification des sprints complètent cette vue de conception. Les chapitres
+suivants détaillent la réalisation de chacune des releases, en commençant par la
+compréhension métier et l'ingénierie des données.
+
+\end{document}

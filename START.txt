@@ -1,0 +1,244 @@
+================================================================================
+  BFPME — HOW TO LAUNCH THE PROJECT
+  (run these steps every time you start a new session)
+================================================================================
+
+REQUIREMENTS
+------------
+  - Python 3.13  (C:\Python313\python.exe)
+  - Ollama 0.30+  (ollama.exe must be in PATH)
+  - Model downloaded: qwen2.5:7b  (4.7 GB)
+  - All pip dependencies installed in backend/  (see STEP 0)
+
+
+================================================================================
+  STEP 0 — ONE-TIME SETUP  (skip after first run)
+================================================================================
+
+Open a PowerShell terminal and run:
+
+    cd d:\BFPME\backend
+    pip install -r requirements.txt
+
+This installs FastAPI, uvicorn, XGBoost, SHAP, scikit-learn, httpx, etc.
+
+
+================================================================================
+  STEP 1 — START OLLAMA  (Terminal 1)
+================================================================================
+
+First check if Ollama is already running:
+
+    ollama list
+
+  - If you see qwen2.5:7b in the list → Ollama is already running, SKIP to STEP 2.
+  - If you get a connection error → start it manually:
+
+    ollama serve
+
+    Leave this terminal open. You should see:
+        Listening on 127.0.0.1:11434
+
+NOTE: On Windows, Ollama often starts automatically at login as a system tray
+      app. The error "bind: Une seule utilisation..." means it is already
+      running — that is fine, do not start a second instance.
+
+
+================================================================================
+  STEP 2 — VERIFY THE LLM MODEL IS AVAILABLE
+================================================================================
+
+In any terminal run:
+
+    ollama list
+
+You must see:  qwen2.5:7b
+
+If it is missing, pull it again:
+
+    ollama pull qwen2.5:7b
+
+
+================================================================================
+  STEP 3 — FREE PORT 8000 IF NEEDED  (skip if port is free)
+================================================================================
+
+Check whether port 8000 is already in use:
+
+    netstat -ano | findstr ":8000"
+
+If you see a result, note the PID in the last column and kill it:
+
+    taskkill /PID <PID> /F
+
+Example:
+    netstat -ano | findstr ":8000"
+    →  TCP  0.0.0.0:8000  ...  LISTENING  12345
+    taskkill /PID 12345 /F
+
+
+================================================================================
+  STEP 4 — START THE BACKEND  (Terminal 2)
+================================================================================
+
+Open a NEW PowerShell terminal and run:
+
+    cd d:\BFPME\backend
+    python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+Wait until you see:
+
+    INFO:     Application startup complete.
+    INFO:     Uvicorn running on http://0.0.0.0:8000
+
+Leave this terminal open. The --reload flag auto-restarts on code changes.
+
+IMPORTANT: The .env file at d:\BFPME\backend\.env controls all settings.
+           Current configuration:
+             LLM_ENABLED   = true
+             LLM_MODEL     = qwen2.5:7b
+             LLM_BASE_URL  = http://127.0.0.1:11434/v1
+             MODEL_ARTIFACT_PATH = d:/BFPME/data/option_c_xgboost_model.joblib
+
+
+================================================================================
+  STEP 5 — OPEN THE DASHBOARD
+================================================================================
+
+Open your browser and go to:
+
+    http://127.0.0.1:8000/dashboard        ← main dashboard (HTML/JS UI)
+    http://127.0.0.1:8000/docs             ← Swagger UI (all API endpoints)
+    http://127.0.0.1:8000/health           ← quick health check
+
+
+================================================================================
+  STEP 6 — TEST THE LLM ENDPOINT  (optional quick smoke test)
+================================================================================
+
+Run this in any terminal to verify the full pipeline works (predict + SHAP + LLM):
+
+    $body = @'
+    {
+      "message": "Is this SME a high risk client?",
+      "features": {
+        "code_modele": 1,
+        "montant_pret": 500000,
+        "chiffre_affaires_annuel": 800000,
+        "capitaux_propres": 120000,
+        "dettes_court_terme": 300000,
+        "dettes_long_terme": 200000,
+        "total_actif": 950000,
+        "total_passif": 830000,
+        "tresorerie_disponible": 45000,
+        "fonds_roulement_fdr": 80000,
+        "besoin_fonds_roulement_bfr": 95000,
+        "retards_paiement_jours_moyen": 45,
+        "montant_impayes": 15000,
+        "duree_mois": 84,
+        "taux_interet_teg": 7.5,
+        "valeur_garanties": 350000,
+        "apport_personnel": 100000,
+        "montant_total_investissement": 600000,
+        "anciennete_entreprise": 5,
+        "nombre_employes": 22,
+        "capital_social": 50000,
+        "taux_inflation": 6.2,
+        "taux_directeur": 8.0,
+        "croissance_pib": 1.5,
+        "taux_chomage": 12.0,
+        "risque_sectoriel": 3,
+        "risque_pays_region": 2,
+        "score_bfpme_global": 58,
+        "secteur_activite": "industrie",
+        "region_localisation": "nord",
+        "structure_juridique": "sarl",
+        "classification_pme": "pme",
+        "type_taux": "fixe"
+      },
+      "run_validation": true,
+      "run_prediction": true,
+      "run_explanation": true,
+      "threshold": 0.5,
+      "top_k_shap": 5
+    }
+    '@
+    Invoke-RestMethod -Uri "http://127.0.0.1:8000/chat/analyze" `
+      -Method Post -Body $body -ContentType "application/json" `
+      -TimeoutSec 150 | Select-Object used_llm, llm_summary
+
+Expected: used_llm = True, llm_summary contains a credit risk narrative.
+
+NOTE: The first LLM call after starting Ollama may take 30–90 seconds while
+      the model loads into GPU/CPU memory. Subsequent calls are much faster.
+
+
+================================================================================
+  OPTIONAL — RETRAIN THE MODEL
+================================================================================
+
+If you want to retrain XGBoost on a new dataset:
+
+    cd d:\BFPME
+    python scripts\train_option_c_xgboost.py
+
+Then reload the artifact without restarting the server:
+
+    Invoke-RestMethod -Uri "http://127.0.0.1:8000/metadata/reload-model" -Method Post
+
+
+================================================================================
+  OPTIONAL — RUN THE IFRS 9 ECL PIPELINE
+================================================================================
+
+    cd d:\BFPME
+    python scripts\generate_ifrs9_no_staging.py
+    python scripts\ifrs9_ecl_synthesis.py
+
+Output files are written to  d:\BFPME\dataset_IFRS9\
+
+
+================================================================================
+  TROUBLESHOOTING
+================================================================================
+
+Problem:  "uvicorn: command not found"
+Fix:      Use  python -m uvicorn  instead of  uvicorn  directly.
+
+Problem:  500 Internal Server Error on /predict
+Fix:      Check that code_modele is an integer (1 or 2), not a string like "A".
+          Missing features are auto-imputed — you do not need to send all fields.
+
+Problem:  LLM call times out
+Fix:      Ollama may still be loading the model. Wait 60s and retry.
+          If it persists, run  ollama serve  in a separate terminal.
+
+Problem:  Port 8000 already in use
+Fix:      See STEP 3 above.
+
+Problem:  Model artifact not found
+Fix:      Check that  d:\BFPME\data\option_c_xgboost_model.joblib  exists.
+          If missing, retrain:  python scripts\train_option_c_xgboost.py
+
+
+================================================================================
+  FILE LAYOUT (reference)
+================================================================================
+
+  d:\BFPME\
+  ├── backend\
+  │   ├── .env                        ← all configuration (edit this)
+  │   ├── app\
+  │   │   ├── main.py                 ← FastAPI app entry point
+  │   │   ├── routers\                ← one file per endpoint group
+  │   │   └── services\               ← business logic
+  │   └── requirements.txt
+  ├── frontend\                       ← static dashboard (HTML/JS/CSS)
+  ├── data\
+  │   ├── option_c_xgboost_model.joblib
+  │   └── option_c_xgboost_metrics.json
+  ├── scripts\                        ← training + IFRS9 batch scripts
+  ├── dataset_IFRS9\                  ← IFRS9 ECL output CSVs
+  └── START.txt                       ← this file
+
+================================================================================

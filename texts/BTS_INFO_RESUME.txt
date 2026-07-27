@@ -1,0 +1,428 @@
+================================================================================
+              BTS_INFO.xlsx — RESUME DETAILLE
+              Systeme de Scoring BFPME (Banque de Financement des PME)
+================================================================================
+
+Ce fichier Excel constitue la base de configuration complete du systeme de
+notation/scoring utilise par la BFPME pour evaluer les demandes de financement
+de projets PME. Il contient 10 feuilles : 9 tables de reference (referentiels)
+et 1 feuille contenant le code source C# du moteur de calcul.
+
+================================================================================
+  SECTION 1 : DESCRIPTION DES FEUILLES (REFERENTIELS)
+================================================================================
+
+------------------------------------------------------------------------
+FEUILLE 1 : RU_ModeleNotation — Modeles de notation (2 modeles)
+------------------------------------------------------------------------
+Definit les deux modeles de scoring actifs depuis le 01/10/2021.
+
+  Code | Modele                              | Secteur | Actif
+  -----|-------------------------------------|---------|------
+   1   | Projet En Creation  (Modele 2021)   | Tous    | Oui
+   2   | Projet en Extension (Modele 2021)   | Tous    | Oui
+
+  - CodeSecteurActivite = 9999 signifie que le modele s'applique a tous
+    les secteurs d'activite.
+  - Chaque demande de financement est evaluee selon l'un de ces deux modeles
+    selon que le projet est nouveau ou en extension.
+
+------------------------------------------------------------------------
+FEUILLE 2 : RU_Facteur — Facteurs principaux (6 facteurs)
+------------------------------------------------------------------------
+Les 6 grandes dimensions d'evaluation d'un projet :
+
+  Code | Facteur               | Abreviation
+  -----|-----------------------|------------
+   1   | Financier             | FIN
+   2   | Conduite de comptes   | ACC
+   3   | Business              | Bus
+   4   | Management            | Man
+   5   | Industrie             | Ind
+   6   | Psychometrique        | Psy
+
+  Chaque facteur regroupe plusieurs sous-facteurs evalues separement.
+
+------------------------------------------------------------------------
+FEUILLE 3 : RU_FacteursParModele — Ponderation des facteurs par modele
+------------------------------------------------------------------------
+Definit le poids (%) de chaque facteur selon le modele de notation.
+
+  MODELE 1 (Projet En Creation) :
+    FIN=22%  ACC=8%  Business=20%  Management=15%  Industrie=15%  Psy=20%
+    Total = 100%
+
+  MODELE 2 (Projet en Extension) :
+    FIN=40%  ACC=20%  Business=15%  Management=15%  Industrie=10%
+    (Pas de facteur Psy dans le modele 2)
+    Total = 100%
+
+  Note : Le modele 2 donne beaucoup plus de poids a la dimension Financiere
+  car un projet en extension dispose deja d'un historique financier.
+
+------------------------------------------------------------------------
+FEUILLE 4 : RU_SousFacteur — Sous-facteurs (61 sous-facteurs)
+------------------------------------------------------------------------
+Detail des criteres d'evaluation au sein de chaque facteur.
+Chaque sous-facteur a :
+  - Un libelle FR et AR
+  - CodeNatureValeur : format de la valeur (voir feuille RU_NatureValeur)
+  - CodeTypeValeur   : type de la valeur (voir feuille RUTypeValeur)
+  - NonDisponible    : indique si la donnee peut etre absente
+
+  Exemples par facteur :
+
+  FINANCIER (FIN) — Sous-facteurs du modele 1 :
+    - Capital/Cout du projet (>40%)
+    - FDR/BFR (Annee 1)
+    - Cashflow brut cumule / Echeances de credit
+    - Ratio minimum cashflow annuel / echeances annuelles
+    - % de financement propre PME+Promoteur / Capital
+
+  CONDUITE DE COMPTES (ACC) :
+    - Classement le plus defavorable a la SED et BFPME (3 ans)
+    - Cheques impayes
+    - Blacklist au cours des 12 derniers mois
+
+  BUSINESS (Bus) :
+    - Concentration des ventes sur les 2 premiers clients
+    - Statut de l'entreprise vis-a-vis de ses locaux
+    - Risque de la chaine d'approvisionnement
+    - Diversite des produits
+    - Facilement vendable ou non
+
+  MANAGEMENT (Man) :
+    - Age du promoteur / gerant / DG
+    - Plan de succession
+    - Capacites professionnelles (techniques, commerciales, manageriales)
+
+  INDUSTRIE (Ind) :
+    - Competitivite / Concurrence
+    - Sensibilite au taux de change
+    - Risque du secteur d'activites
+    - Risque de la chaine de livraison
+    - Moyens materiels
+    - Strategie de developpement / commerciale
+
+  PSYCHOMETRIQUE (Psy) — (Modele 1 uniquement) :
+    Questions d'auto-evaluation du promoteur :
+    - "Je suis un leader dans la plupart des groupes"
+    - "Les presentations a l'ecole etaient difficiles pour moi"
+    - "Ca m'inquiete que les gens decouvrent mes faiblesses"
+    - "Il y a beaucoup de choses dans mon passe que je voudrais changer"
+    - "Je prend des risques et c'est un facteur d'innovation"
+    - "Integrite (Killing)" — critere eliminatoire
+    ... (16 questions au total)
+
+------------------------------------------------------------------------
+FEUILLE 5 : RU_SousFacteurParModele — Config sous-facteurs par modele (71 lignes)
+------------------------------------------------------------------------
+Lie chaque sous-facteur a un modele avec des parametres de configuration :
+
+  Colonnes :
+    - CodeSousFacteur         : reference au sous-facteur
+    - CodeModeleNotation      : modele concerne (1 ou 2)
+    - CodeFacteur             : facteur parent
+    - MinWithoutKillingFactors: score minimum sans tenir compte des criteres eliminatoires
+    - Rang                    : ordre d'affichage
+    - Priorite                : poids relatif entre sous-facteurs d'un meme facteur
+    - CritereEliminatoire     : 1 = ce sous-facteur peut bloquer la notation
+    - AccepteNonDisponible    : 1 = donnee absente acceptable
+    - ValeurCritereObligatoire: 1 = la valeur doit obligatoirement etre saisie
+
+  Exemple (Modele 1, Facteur FIN) :
+    Capital/Cout du projet : Min=10, Rang=1, Priorite=1, Eliminatoire=OUI
+    FDR/BFR (An 1)         : Min=-10, Rang=2, Priorite=1, Eliminatoire=OUI
+
+------------------------------------------------------------------------
+FEUILLE 6 : RU_Critere — Valeurs de criteres (133 criteres)
+------------------------------------------------------------------------
+Les options de reponse concretes pour chaque sous-facteur.
+Exemple pour le sous-facteur "Capital/Cout du projet (>40%)" :
+  - Code 1 : "Inferieur a 40%"
+  - Code 2 : "Entre 40% et 50%"
+  - Code 3 : "Entre 50% et 60%"
+  - ...
+
+Chaque critere peut etre marque NonDisponible = 1 (donnee non disponible).
+
+------------------------------------------------------------------------
+FEUILLE 7 : RU_CritereNotes — Bareme de notation (327 regles)
+------------------------------------------------------------------------
+Le coeur du systeme de scoring : pour chaque combinaison
+(Critere + SousFacteur + ModeleNotation), definit :
+
+  - Note          : score numerique attribue (ex: 10, 30, 70, -9999)
+  - BorneInf/Sup  : plage de valeurs declenchant ce score
+  - SigneBorneInf/Sup : operateurs de comparaison (<, <=, >)
+  - Eliminatoire  : True = note eliminatoire (bloque le dossier)
+  - CodeCouleur   : couleur d'affichage dans l'interface
+
+  Exemple :
+    SousFacteur=1 (Capital/Cout projet), Modele=1 :
+      Critere 1  -> Note=-9999  (eliminatoire, <40%)
+      Critere 126 -> Note=10   (entre 40% et 50%)
+      Critere 127 -> Note=30   (entre 50% et 60%)
+      Critere ...  -> Note=70  (>70%)
+
+  Note -9999 signifie "critere eliminatoire" : le dossier est
+  automatiquement rejete si ce critere est selectionne.
+
+------------------------------------------------------------------------
+FEUILLE 8 : RUTypeValeur — Types de valeur (5 types)
+------------------------------------------------------------------------
+  Code | Type
+  -----|------------------
+   1   | Valeur numerique brute
+   2   | Pourcentage
+   3   | Oui / Non
+   4   | Accord / Non Accord
+   5   | Appreciation (ex: Bon, Moyen, Faible)
+
+------------------------------------------------------------------------
+FEUILLE 9 : RU_NatureValeur — Nature de la valeur (4 natures)
+------------------------------------------------------------------------
+  Code | Nature
+  -----|------------------
+   1   | Valeur unique
+   2   | Fourchette de valeurs (plage min-max)
+   3   | Liste de valeurs predefinies
+   4   | Liste a choix unique
+
+================================================================================
+  SECTION 2 : CODE SOURCE C# — MOTEUR DE CALCUL DU SCORING
+================================================================================
+
+Le code se trouve dans la feuille "Code source calcul de notation".
+Il contient deux methodes principales :
+
+  1. ScoringNotesByProject(int Numero_DemandeFinan)
+  2. CalculWeightsDesSousFacteurs()
+
+========================================
+METHODE 1 : ScoringNotesByProject()
+========================================
+
+SIGNATURE :
+  public static List<ScoringNotesViewModel> ScoringNotesByProject(int Numero_DemandeFinan)
+
+ROLE :
+  Calcule toutes les notes de scoring pour une demande de financement donnee
+  et retourne la liste complete des notes avec leurs scores ponderes.
+
+------ ETAPE 1 : Verification et chargement de la notation active ------
+
+  // Recupere les notations annulees
+  List<int> ListeNotationAnnulle = DB.ScoringNotationAnnulation...
+
+  // Si aucune notation active n'existe pour ce dossier, retourne liste vide
+  if (!DB.ScoringNotation.Any(...)) return new List<ScoringNotesViewModel>();
+
+  // Prend la notation la plus recente non annulee
+  ScoringNotation = ...OrderByDescending(c => c.DateNotation).FirstOrDefault();
+  int CodeModeleNotation = ScoringNotation.CodeModeleNotation; // 1 ou 2
+
+------ ETAPE 2 : Calcul des ponderations de reference ------
+
+  // Appelle CalculWeightsDesSousFacteurs() pour obtenir les poids par sous-facteur
+  ListeDonneesDuSommaire = CalculWeightsDesSousFacteurs()
+                           .Where(c => c.CodeModeleNotation == CodeModeleNotation)
+
+  // Calcule les bornes globales (min/max) pour normaliser les scores :
+  SommeScoreByWeightGoodFinancialMin    -> somme des scores min ponderes (scenario optimiste)
+  SommeScoreByWeightAverageFinancialMin -> somme des scores min ponderes (scenario moyen)
+  SommeScoreByWeightGoodFinancialMax    -> somme des scores max ponderes (optimiste)
+  SommeScoreByWeightAverageFinancialMax -> somme des scores max ponderes (moyen)
+
+  MinSomme = min(GoodMin, AverageMin)   // borne basse globale de normalisation
+  MaxSomme = max(GoodMax, AverageMax)   // borne haute globale de normalisation
+
+------ ETAPE 3 : Chargement des regles metier ------
+
+  ListeCodeCritereNonDisponible         -> criteres marques "non disponible"
+  ListeCodeSousFactereNonNonDisponible  -> sous-facteurs qui n'acceptent PAS la non-disponibilite
+  ListeCodeCritereDuSousFactereNonNon.. -> criteres non-dispo pour des sous-facteurs obligatoires
+  ListeCodeCritereEliminatoire          -> criteres qui eliminent automatiquement le dossier
+  ListeCodeSousFacteurValeurObligatoire -> sous-facteurs dont la saisie est obligatoire
+
+  ExisteNonDisponible = true si un sous-facteur obligatoire n'a pas de valeur
+    -> Dans ce cas, tous les scores calcules seront mis a 0.
+
+------ ETAPE 4 : Construction de la liste de resultats (LINQ) ------
+
+  Pour chaque note saisie dans ScoringNotes (correspondant a ce dossier
+  et ce modele), le code construit un objet ScoringNotesViewModel avec :
+
+    - Code, CodeNotation, CodeModeleNotation
+    - CodeSousFacteur, CodeCritere, Valeur
+    - CodeFacteur (recupere depuis RU_SousFacteurParModele)
+    - SousFacteur (libelle du sous-facteur)
+    - NonDisponible     : vrai si critere = "non disponible"
+    - CritereEliminatoire : vrai si critere est eliminatoire
+    - ValeurCritereObligatoire : vrai si sous-facteur est obligatoire
+
+------ ETAPE 5 : Calcul des notes et scores pour chaque element ------
+
+  Pour chaque ScoringNotesViewModel dans result, la boucle foreach calcule :
+
+  a) NombreCritereSousFacteurSupSeuil
+     Nombre de criteres du sous-facteur dont la note >= -70 (seuil de calcul)
+
+  b) MoyenneNoteSousFacteur
+     Moyenne des notes positives du sous-facteur (utilisee pour les criteres
+     dont la valeur n'est pas un code critere mais une valeur numerique brute)
+
+  c) PonderationFacteur
+     Poids du facteur parent dans le modele (ex: FIN=22%)
+
+  d) NotePondereSousFacteurGoodFinancial / AverageFinancial
+     Poids du sous-facteur selon le scenario optimiste / moyen
+     (calcule par CalculWeightsDesSousFacteurs)
+
+  e) NoteAttribuee (logique complexe) :
+     - Si CodeCritere > 0 ET critere n'est PAS "non disponible" :
+         -> Cherche la note dans RU_CritereNotes pour ce triplet
+            (CodeCritere, CodeSousFacteur, CodeModeleNotation)
+         -> Retourne la note numerique (ex: 10, 30, 70, -9999)
+     - Si CodeCritere > 0 ET critere EST "non disponible" :
+         -> Calcule la moyenne des notes > seuil (-70) du sous-facteur
+            divisee par le nombre de criteres au-dessus du seuil
+     - Si CodeCritere = 0 :
+         -> Note = 0
+
+  f) NotePondereCritereGoodFinancial   = NoteAttribuee * PoidsGoodFinancial / 100
+     NotePondereCritereAverageFinancial = NoteAttribuee * PoidsAverageFinancial / 100
+
+  g) ScoreCalculeGoodFinancial (score normalise entre 0 et 200) :
+     Si ExisteNonDisponible -> Score = 0
+     Sinon :
+       Score = ((NoteAttribuee * Poids/100 - MinSomme/NbElement) * 200
+                / (MaxSomme - MinSomme)) + 100/NbElement
+
+     Cette formule normalise le score sur une echelle de 0 a 200,
+     centree sur la position relative de la note entre le min et le max.
+
+  h) Critere : libelle textuel du critere selectionne (depuis RU_Critere)
+
+========================================
+METHODE 2 : CalculWeightsDesSousFacteurs()
+========================================
+
+SIGNATURE :
+  public static List<ScoringPonderationSousFacteurViewModel> CalculWeightsDesSousFacteurs()
+
+ROLE :
+  Calcule les poids (ponderations) de chaque sous-facteur dans le scoring
+  final, en tenant compte de la priorite relative entre sous-facteurs
+  et des deux scenarios financiers (Good et Average).
+
+------ ALGORITHME ------
+
+  Pour chaque modele de notation (1 et 2) :
+    Pour chaque facteur dans ce modele :
+
+      1. Recupere tous les sous-facteurs du facteur
+      2. Calcule la priorite moyenne de chaque sous-facteur :
+         PrioriteMoyenneSousFacteur = (MaxPriorite + 1 - Priorite) / NbreSousFacteurs
+         -> Les sous-facteurs de priorite haute (=1) ont un poids plus grand
+
+      3. Calcule SommeMoyennePrioriteSousfacteur = somme de toutes les priorites moyennes
+
+      4. Pour chaque sous-facteur :
+         SubWeights = PrioriteMoyenne * 100 / SommePrioriteMoyenne
+           -> Part relative du sous-facteur dans son facteur (en %)
+
+         Weights = SubWeights / 100 * PonderationFacteur
+           -> Poids absolu dans le score total
+
+         WeightGoodFinancial    = SubWeights / 100 * PonderationGoodFinancial
+         WeightAverageFinancial = SubWeights / 100 * PonderationAverageFinancial
+
+      5. Calcule les bornes de score pour ce sous-facteur :
+         Min = note minimale parmi tous les criteres du sous-facteur
+         ScoreNotWeightedMinWithoutKillingFactor = MinWithoutKillingFactors
+           (defini dans RU_SousFacteurParModele, ignore les criteres eliminatoires)
+         ScoreNotWeightedMax = note maximale parmi tous les criteres
+
+      6. Scores ponderes (par le poids du sous-facteur) :
+         ScoreByWeightGoodFinancialMin     = Min * WeightGoodFinancial / 100
+         ScoreByWeightGoodFinancialMax     = Max * WeightGoodFinancial / 100
+         ScoreByWeightAverageFinancialMin  = Min * WeightAverageFinancial / 100
+         ScoreByWeightAverageFinancialMax  = Range * WeightAverageFinancial / 100
+
+      7. Overall (combinaison des deux scenarios) :
+         MinOverall = min(AvgMin, GoodMin)
+         MaxOverall = min(AvgMax, GoodMax)
+
+      8. Accumule tous ces calculs dans un objet ScoringSummaryViewModel
+         et l'ajoute a la liste Resultat.
+
+  Retourne la liste complete de toutes les ponderations calculees.
+
+================================================================================
+  SECTION 3 : LOGIQUE GLOBALE DU SYSTEME — RESUME
+================================================================================
+
+Le systeme de scoring BFPME fonctionne selon les etapes suivantes :
+
+  [1] SAISIE
+      Un agent BFPME saisit pour chaque sous-facteur la valeur ou
+      le critere correspondant a la situation reelle du projet.
+
+  [2] SELECTION DU MODELE
+      Selon le type de projet (Creation=1 ou Extension=2), le modele
+      de notation adequat est selectionne automatiquement.
+
+  [3] VERIFICATION DES ELIMINATOIRES
+      Si un critere eliminatoire est selectionne (ex: cheques impayes,
+      mauvais classement SED) ou si un sous-facteur obligatoire n'a
+      pas de valeur, le scoring est bloque ou remis a zero.
+
+  [4] ATTRIBUTION DES NOTES
+      Pour chaque sous-facteur, la note correspondant au critere
+      selectionne est recuperee depuis RU_CritereNotes.
+      Si la donnee est "non disponible", une note moyenne est calculee.
+
+  [5] PONDERATION
+      Chaque note est multipliee par le poids du sous-facteur (calcule
+      dynamiquement selon la priorite relative des sous-facteurs).
+
+  [6] NORMALISATION (score 0-200)
+      La note ponderee est normalisee par rapport aux bornes min/max
+      theoriques du modele, pour produire un score final entre 0 et 200.
+
+  [7] DEUX SCENARIOS
+      Le calcul est effectue en parallele pour deux scenarios :
+        - GoodFinancial   : scenario financier optimiste
+        - AverageFinancial: scenario financier moyen/prudent
+
+  [8] RESULTAT FINAL
+      La liste des ScoringNotesViewModel retournee contient :
+        - Toutes les notes par sous-facteur
+        - Les scores normalises (Good et Average)
+        - Les indicateurs eliminatoires et de disponibilite
+        - Les ponderations par facteur et sous-facteur
+      Ces donnees sont utilisees par l'interface pour afficher
+      le tableau de bord de scoring du dossier de financement.
+
+================================================================================
+  SECTION 4 : SCHEMA DES RELATIONS ENTRE TABLES
+================================================================================
+
+  RU_ModeleNotation (1 ou 2)
+       |
+       |--- RU_FacteursParModele ---> RU_Facteur (FIN, ACC, Bus, Man, Ind, Psy)
+       |           [Ponderation %]
+       |
+       |--- RU_SousFacteurParModele -> RU_SousFacteur (61 sous-facteurs)
+                   [Priorite, Min, Eliminatoire, Obligatoire]
+                        |
+                        |--- RU_CritereNotes ---> RU_Critere (133 valeurs)
+                                [Note, BorneInf, BorneSup, Eliminatoire]
+                                       |
+                                       |--- RUTypeValeur   (%, Oui/Non, etc.)
+                                       |--- RU_NatureValeur (liste, fourchette, etc.)
+
+================================================================================
+  FIN DU RESUME
+================================================================================
