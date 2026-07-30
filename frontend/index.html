@@ -697,31 +697,96 @@
 
             <div class="mc-stats-row">
               <div class="mc-stat-card">
-                <div class="mc-stat-label">P10 · Meilleur cas</div>
+                <div class="mc-stat-label">P10 · Meilleur cas
+                  <span class="info-tip">
+                    <span class="info-tip-icon" role="button" tabindex="0" aria-label="Qu'est-ce que P10 ?">ⓘ</span>
+                    <span class="info-tip-bubble">
+                      10% des scénarios simulés donnent une PD inférieure à cette valeur — c'est
+                      la borne basse de la fourchette « typique » (80% des scénarios se situent
+                      entre P10 et P90).
+                    </span>
+                  </span>
+                </div>
                 <div class="mc-stat-value success" id="mcP10">—</div>
               </div>
               <div class="mc-stat-card">
-                <div class="mc-stat-label">P50 · Médiane</div>
+                <div class="mc-stat-label">P50 · Médiane
+                  <span class="info-tip">
+                    <span class="info-tip-icon" role="button" tabindex="0" aria-label="Qu'est-ce que P50 ?">ⓘ</span>
+                    <span class="info-tip-bubble">
+                      Valeur centrale des scénarios simulés : la moitié des tirages donnent une
+                      PD plus basse, l'autre moitié une PD plus haute. Proche de la PD moyenne si
+                      la distribution n'est pas déformée par quelques scénarios extrêmes.
+                    </span>
+                  </span>
+                </div>
                 <div class="mc-stat-value" id="mcP50">—</div>
               </div>
               <div class="mc-stat-card">
-                <div class="mc-stat-label">P90 · Pire cas</div>
+                <div class="mc-stat-label">P90 · Pire cas
+                  <span class="info-tip">
+                    <span class="info-tip-icon" role="button" tabindex="0" aria-label="Qu'est-ce que P90 ?">ⓘ</span>
+                    <span class="info-tip-bubble">
+                      10% des scénarios simulés donnent une PD supérieure à cette valeur — c'est
+                      la borne haute de la fourchette « typique » (80% des scénarios se situent
+                      entre P10 et P90).
+                    </span>
+                  </span>
+                </div>
                 <div class="mc-stat-value danger" id="mcP90">—</div>
               </div>
               <div class="mc-stat-card">
-                <div class="mc-stat-label">PD Moyenne</div>
+                <div class="mc-stat-label">PD Moyenne
+                  <span class="info-tip">
+                    <span class="info-tip-icon" role="button" tabindex="0" aria-label="Qu'est-ce que la PD moyenne ?">ⓘ</span>
+                    <span class="info-tip-bubble">
+                      Moyenne arithmétique de la PD sur l'ensemble des scénarios simulés — le
+                      centre de la distribution de stress, à comparer à la PD de base (avant
+                      chocs).
+                    </span>
+                  </span>
+                </div>
                 <div class="mc-stat-value" id="mcMean">—</div>
               </div>
               <div class="mc-stat-card">
-                <div class="mc-stat-label">Volatilité (σ)</div>
+                <div class="mc-stat-label">Volatilité (σ)
+                  <span class="info-tip">
+                    <span class="info-tip-icon" role="button" tabindex="0" aria-label="Qu'est-ce que la volatilité ?">ⓘ</span>
+                    <span class="info-tip-bubble">
+                      Écart-type de la PD simulée : mesure à quel point la PD du client bouge
+                      sous les chocs configurés. Une volatilité faible signifie un client robuste
+                      au stress ; une volatilité élevée signifie un client fragile, même si sa PD
+                      de base semble sûre.
+                    </span>
+                  </span>
+                </div>
                 <div class="mc-stat-value" id="mcStd">—</div>
               </div>
               <div class="mc-stat-card">
-                <div class="mc-stat-label">VaR 95 · risque extrême</div>
+                <div class="mc-stat-label">VaR 95 · risque extrême
+                  <span class="info-tip">
+                    <span class="info-tip-icon" role="button" tabindex="0" aria-label="Qu'est-ce que le VaR 95 ?">ⓘ</span>
+                    <span class="info-tip-bubble">
+                      Value-at-Risk à 95% : le niveau de PD dépassé dans seulement les 5% pires
+                      scénarios simulés. C'est la sévérité du risque extrême, pas celle du cas
+                      moyen.
+                    </span>
+                  </span>
+                </div>
                 <div class="mc-stat-value danger" id="mcVar95">—</div>
               </div>
               <div class="mc-stat-card">
-                <div class="mc-stat-label">ES 95 · moy. pire 5%</div>
+                <div class="mc-stat-label">ES 95 · moy. pire 5%
+                  <span class="info-tip">
+                    <span class="info-tip-icon" role="button" tabindex="0" aria-label="Qu'est-ce que l'ES 95 ?">ⓘ</span>
+                    <span class="info-tip-bubble">
+                      Expected Shortfall à 95% : la PD moyenne au sein de ces 5% pires scénarios
+                      (donc au-delà du VaR 95). Plus informatif que le VaR seul, car il indique à
+                      quel point la queue de distribution est réellement mauvaise, pas seulement
+                      son seuil de départ.
+                    </span>
+                  </span>
+                </div>
                 <div class="mc-stat-value danger" id="mcEs95">—</div>
               </div>
             </div>
@@ -733,7 +798,19 @@
                 <div class="chart-container-sm"><canvas id="chartMCHist"></canvas></div>
               </div>
               <div class="mc-chart-card">
-                <h4>Répartition par Classe de Risque</h4>
+                <h4>Répartition par Classe de Risque
+                  <span class="info-tip">
+                    <span class="info-tip-icon" role="button" tabindex="0" aria-label="Qu'est-ce que la répartition par classe de risque ?">ⓘ</span>
+                    <span class="info-tip-bubble">
+                      Part des scénarios simulés qui tombent dans chaque palier de risque (mêmes
+                      seuils que Prédiction de Risque : faible si PD &lt; 40%, moyen entre 40% et
+                      70%, élevé à partir de 70%). Si tous les scénarios restent dans la même
+                      fourchette de PD, une seule couleur apparaît (ex. tout en orange = client
+                      qui reste « risque moyen » sous tous les chocs testés) — ce n'est pas une
+                      erreur d'affichage, c'est le signe d'une PD stable sous stress.
+                    </span>
+                  </span>
+                </h4>
                 <p class="mc-chart-hint">Part des scénarios dans chaque palier de risque.</p>
                 <div class="chart-container-sm"><canvas id="chartMCRisk"></canvas></div>
               </div>
