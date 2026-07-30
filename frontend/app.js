@@ -33,6 +33,10 @@ function toast(msg, type = '') {
   setTimeout(() => el.remove(), 3200);
 }
 
+// ── Risk-class labels (backend values stay low/medium/high — only the
+// displayed text is localised; CSS class suffixes must stay untranslated) ──
+const RISK_LABEL_FR = { low: 'FAIBLE', medium: 'MOYEN', high: 'ÉLEVÉ' };
+
 // ── Shared state ──────────────────────────────────────────────────────────
 let lastFeatures = null;
 let lastPrediction = null;
@@ -63,10 +67,10 @@ async function checkHealth() {
   try {
     await api('/health');
     dot.className = 'status-dot ok';
-    label.textContent = 'Online';
+    label.textContent = 'En ligne';
   } catch {
     dot.className = 'status-dot err';
-    label.textContent = 'Offline';
+    label.textContent = 'Hors ligne';
   }
 }
 checkHealth();
@@ -124,14 +128,14 @@ function drawHomeCharts(eda) {
   makeChart('chartTarget', {
     type: 'doughnut',
     data: {
-      labels: ['Default', 'Non-Default'],
+      labels: ['Défaut', 'Non-Défaut'],
       datasets: [{ data: [s.default_count, s.non_default_count], backgroundColor: ['#F87171', '#34D399'], borderWidth: 3, borderColor: '#fff', hoverOffset: 8 }]
     },
     options: { ...COMMON_DONUT, cutout: '72%', plugins: { legend: { display: false } } }
   });
   const tot = (s.default_count || 0) + (s.non_default_count || 0) || 1;
   document.getElementById('targetLegend').innerHTML = [
-    ['Default', s.default_count, '#F87171'], ['Non-Default', s.non_default_count, '#34D399']
+    ['Défaut', s.default_count, '#F87171'], ['Non-Défaut', s.non_default_count, '#34D399']
   ].map(([l, c, col]) => `<div class="legend-item"><div class="legend-dot" style="background:${col}"></div>${l} — ${c.toLocaleString()} (${(c / tot * 100).toFixed(0)}%)</div>`).join('');
 
   // ── Risk class breakdown (horizontal bar, rating-coloured) ──
@@ -254,6 +258,12 @@ function getBaselineFeatures() {
   return baselineFeatures;
 }
 
+// Numeric mapping of BFPME risk class -> risk index, per
+// texts/dataset_final_variable_dictionary.txt.
+const RISK_CLASS_INDEX = {
+  Excellent: 0.08, Bon: 0.22, Moyen: 0.45, Risque: 0.68, Tres_Risque: 0.85, Rejete: 0.97
+};
+
 // Build a FULL feature payload: start from the complete baseline, then overlay
 // whatever the user actually filled in. This way changing only a few fields
 // still yields a complete prediction — blank fields fall back to the baseline
@@ -265,6 +275,7 @@ function formToFeatures() {
     const v = coerceFormValue(val);
     if (v !== null) merged[key] = v;   // only override when the user provided a value
   });
+  merged.bfpme_risk_index = RISK_CLASS_INDEX[merged.risk_class] ?? 0.45;
   return merged;
 }
 
@@ -314,7 +325,7 @@ function showResult(data) {
   document.getElementById('resThr').textContent = data.threshold;
 
   const badge = document.getElementById('riskBadge');
-  badge.textContent = rc.toUpperCase();
+  badge.textContent = RISK_LABEL_FR[rc] || rc.toUpperCase();
   badge.className = `result-badge badge-${rc.toLowerCase()}`;
 }
 
@@ -322,7 +333,7 @@ document.getElementById('predForm').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = document.getElementById('btnPredict');
   btn.disabled = true;
-  btn.innerHTML = '<span class="btn-icon">⏳</span> Predicting…';
+  btn.innerHTML = '<span class="btn-icon">⏳</span> Calcul en cours…';
 
   try {
     const features = formToFeatures();
@@ -331,12 +342,12 @@ document.getElementById('predForm').addEventListener('submit', async e => {
     const result = await api('/predict', 'POST', { features });
     lastPrediction = result;
     showResult(result);
-    toast('Prediction complete', 'success');
+    toast('Prédiction terminée', 'success');
   } catch (err) {
     toast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<span class="btn-icon">▶</span> Run Prediction';
+    btn.innerHTML = '<span class="btn-icon">▶</span> Lancer la Prédiction';
   }
 });
 
@@ -352,6 +363,23 @@ document.getElementById('btnGoLLM').addEventListener('click', () => {
   if (lastFeatures) {
     document.getElementById('llmFeaturesInput').value = JSON.stringify(lastFeatures, null, 2);
   }
+});
+
+// Info-tip popovers (click or keyboard to open, click outside to close)
+document.querySelectorAll('.info-tip-icon').forEach(icon => {
+  const wrap = icon.closest('.info-tip');
+  const toggle = () => {
+    const willOpen = !wrap.classList.contains('open');
+    document.querySelectorAll('.info-tip.open').forEach(t => t.classList.remove('open'));
+    wrap.classList.toggle('open', willOpen);
+  };
+  icon.addEventListener('click', e => { e.stopPropagation(); toggle(); });
+  icon.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); toggle(); }
+  });
+});
+document.addEventListener('click', () => {
+  document.querySelectorAll('.info-tip.open').forEach(t => t.classList.remove('open'));
 });
 
 // Accordion toggle
@@ -374,24 +402,49 @@ const shapTopKVal   = document.getElementById('shapTopKVal');
 shapTopKInput.addEventListener('input', () => { shapTopKVal.textContent = shapTopKInput.value; });
 
 document.getElementById('btnExplain').addEventListener('click', async () => {
-  if (!lastFeatures) { toast('Run a prediction first to load client data.', 'error'); return; }
+  if (!lastFeatures) { toast('Lancez d\'abord une prédiction pour charger les données du client.', 'error'); return; }
 
   const btn = document.getElementById('btnExplain');
   btn.disabled = true;
-  btn.innerHTML = '<span class="btn-icon">⏳</span> Computing SHAP…';
+  btn.innerHTML = '<span class="btn-icon">⏳</span> Calcul SHAP en cours…';
 
   try {
     const topK  = Number(shapTopKInput.value);
     const result = await api(`/explain?top_k=${topK}`, 'POST', { features: lastFeatures });
     renderShap(result);
-    toast('SHAP analysis complete', 'success');
+    toast('Analyse SHAP terminée', 'success');
   } catch (err) {
     toast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<span class="btn-icon">🔬</span> Explain Last Client';
+    btn.innerHTML = '<span class="btn-icon">🔬</span> Expliquer le Dernier Client';
   }
 });
+
+// Shared "highest-impact variables" list, fed by SHAP results wherever they're
+// computed (SHAP page's Explain button, or the LLM chat's Run SHAP tool call).
+// Surfaced on both the SHAP page and the LLM sidebar so analysts know which
+// fields to prioritise when framing a what-if scenario.
+function renderInfluentialList(containerId, contribs) {
+  const list = document.getElementById(containerId);
+  if (!list) return;
+  if (!contribs || !contribs.length) {
+    list.innerHTML = '<li class="influential-empty">Pas encore de données SHAP.</li>';
+    return;
+  }
+  const maxAbs = Math.max(...contribs.map(c => Math.abs(c.shap_value))) || 1;
+  list.innerHTML = contribs.map((c, i) => {
+    const name = c.feature.replace(/^(plain_num__|winsor_num__|cat__|ord__|nom__)/, '');
+    const up = c.shap_value >= 0;
+    const pct = Math.round((Math.abs(c.shap_value) / maxAbs) * 100);
+    return `<li class="infl-row">
+      <span class="infl-rank">${i + 1}</span>
+      <span class="infl-name" title="${name}">${name}</span>
+      <span class="infl-bar-wrap"><span class="infl-bar ${up ? 'up' : 'down'}" style="width:${pct}%"></span></span>
+      <span class="infl-dir ${up ? 'up' : 'down'}">${up ? '▲' : '▼'}</span>
+    </li>`;
+  }).join('');
+}
 
 function renderShap(data) {
   document.getElementById('shapPlaceholder').classList.add('hidden');
@@ -403,7 +456,10 @@ function renderShap(data) {
   finalEl.className = `ss-value ${data.prediction >= 0.5 ? 'danger' : ''}`;
 
   const contribs = data.top_contributions;
-  const labels   = contribs.map(c => c.feature.replace(/^(plain_num__|winsor_num__|cat__|ord__)/, ''));
+  renderInfluentialList('shapInfluentialList', contribs);
+  renderInfluentialList('llmInfluentialList', contribs);
+  updateStressParamsFromShap(contribs);
+  const labels   = contribs.map(c => c.feature.replace(/^(plain_num__|winsor_num__|cat__|ord__|nom__)/, ''));
   const values   = contribs.map(c => c.shap_value);
   const colors   = values.map(v => v >= 0 ? 'rgba(239,68,68,.75)' : 'rgba(16,185,129,.75)');
   const borders  = values.map(v => v >= 0 ? '#EF4444' : '#10B981');
@@ -433,7 +489,7 @@ function renderShap(data) {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: ctx => ` SHAP: ${ctx.parsed.x >= 0 ? '+' : ''}${ctx.parsed.x.toFixed(4)}`
+            label: ctx => ` SHAP : ${ctx.parsed.x >= 0 ? '+' : ''}${ctx.parsed.x.toFixed(4)}`
           }
         }
       }
@@ -442,10 +498,10 @@ function renderShap(data) {
 
   const tbody = document.querySelector('#shapTable tbody');
   tbody.innerHTML = contribs.map((c, i) => {
-    const name = c.feature.replace(/^(plain_num__|winsor_num__|cat__|ord__)/, '');
+    const name = c.feature.replace(/^(plain_num__|winsor_num__|cat__|ord__|nom__)/, '');
     const dir  = c.direction === 'increase_risk'
-      ? '<span class="dir-up">▲ Increases risk</span>'
-      : '<span class="dir-down">▼ Decreases risk</span>';
+      ? '<span class="dir-up">▲ Augmente le risque</span>'
+      : '<span class="dir-down">▼ Diminue le risque</span>';
     const shap = c.shap_value >= 0 ? `+${c.shap_value.toFixed(4)}` : c.shap_value.toFixed(4);
     return `<tr>
       <td>${name}</td>
@@ -486,73 +542,77 @@ function addThinking() {
   return div;
 }
 
-// ── What-if parsing: turn plain language into real feature overrides ──────────
-// Numeric fields: keyword + ("by N%" change, or "to / = / at V" absolute set).
+// ── What-if parsing: turn plain language (FR or EN) into real feature
+// overrides. Accents are stripped before matching so "région"/"scénario"
+// match the same as "region"/"scenario". ─────────────────────────────────
+const stripAccents = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+// Numeric fields: keyword + ("by N%" change, or "to / = / at / à V" absolute set).
 const WHATIF_NUM = [
-  { kw: ['inflation'],                              field: 'taux_inflation' },
-  { kw: ['gdp', 'pib', 'growth', 'croissance'],     field: 'croissance_pib' },
-  { kw: ['unemployment', 'chomage', 'chômage'],     field: 'taux_chomage' },
-  { kw: ['policy rate', 'central bank', 'directeur'], field: 'taux_directeur' },
-  { kw: ['interest', 'teg'],                        field: 'taux_interet_teg' },
-  { kw: ['revenue', 'turnover', 'sales', 'chiffre'], field: 'chiffre_affaires_annuel' },
-  { kw: ['loan amount', 'loan', 'montant'],         field: 'montant_pret' },
-  { kw: ['collateral', 'garantie'],                 field: 'valeur_garanties' },
-  { kw: ['short-term debt', 'short term debt', 'dettes court'], field: 'dettes_court_terme' },
-  { kw: ['long-term debt', 'long term debt', 'dettes long'],    field: 'dettes_long_terme' },
-  { kw: ['equity', 'capitaux propres'],             field: 'capitaux_propres' },
-  { kw: ['cash', 'tresorerie', 'trésorerie'],       field: 'tresorerie_disponible' },
-  { kw: ['payment delay', 'delay', 'retard'],       field: 'retards_paiement_jours_moyen' },
-  { kw: ['unpaid', 'impaye', 'impayé'],             field: 'montant_impayes' },
-  { kw: ['employee', 'employe', 'staff', 'headcount'], field: 'nombre_employes' },
-  { kw: ['company age', 'anciennete', 'ancienneté'], field: 'anciennete_entreprise' },
-  { kw: ['duration', 'maturity', 'duree', 'durée'], field: 'duree_mois' },
-  { kw: ['sector risk', 'risque sectoriel'],        field: 'risque_sectoriel' },
-  { kw: ['country risk', 'region risk', 'risque pays'], field: 'risque_pays_region' },
+  { kw: ['inflation'],                                            field: 'taux_inflation' },
+  { kw: ['gdp', 'pib', 'growth', 'croissance'],                   field: 'croissance_pib' },
+  { kw: ['unemployment', 'chomage'],                              field: 'taux_chomage' },
+  { kw: ['policy rate', 'central bank', 'directeur'],             field: 'taux_directeur' },
+  { kw: ['interest', 'teg', 'interet'],                           field: 'taux_interet_teg' },
+  { kw: ['revenue', 'turnover', 'sales', 'chiffre'],              field: 'chiffre_affaires_annuel' },
+  { kw: ['loan amount', 'loan', 'montant du pret', 'montant'],    field: 'montant_pret' },
+  { kw: ['collateral', 'garantie'],                               field: 'valeur_garanties' },
+  { kw: ['short-term debt', 'short term debt', 'dettes court', 'court terme'], field: 'dettes_court_terme' },
+  { kw: ['long-term debt', 'long term debt', 'dettes long', 'long terme'],     field: 'dettes_long_terme' },
+  { kw: ['equity', 'capitaux propres'],                           field: 'capitaux_propres' },
+  { kw: ['cash', 'tresorerie'],                                   field: 'tresorerie_disponible' },
+  { kw: ['payment delay', 'delay', 'retard'],                     field: 'retards_paiement_jours_moyen' },
+  { kw: ['unpaid', 'impaye'],                                     field: 'montant_impayes' },
+  { kw: ['employee', 'employe', 'staff', 'headcount'],            field: 'nombre_employes' },
+  { kw: ['company age', 'anciennete'],                            field: 'anciennete_entreprise' },
+  { kw: ['duration', 'maturity', 'duree'],                        field: 'duree_mois' },
+  { kw: ['sector risk', 'risque sectoriel'],                      field: 'risque_sectoriel' },
+  { kw: ['country risk', 'region risk', 'risque pays'],           field: 'risque_pays_region' },
 ];
 // Categorical fields: keyword + an explicit valid value mentioned.
 const WHATIF_CAT = [
-  { kw: ['region'],                       field: 'region_localisation', values: ['Centre', 'Nord', 'Sud', 'Est', 'Ouest', 'Littoral'] },
-  { kw: ['sector', 'secteur'],            field: 'secteur_activite',    values: ['commerce', 'agriculture', 'btp', 'industrie', 'services', 'tourisme'] },
-  { kw: ['zone'],                         field: 'zone_localisation',   values: ['urbaine', 'rurale', 'industrielle'] },
-  { kw: ['classification', 'size'],       field: 'classification_pme',  values: ['micro', 'petite', 'moyenne'] },
-  { kw: ['legal', 'juridique', 'structure'], field: 'structure_juridique', values: ['SARL', 'SA', 'Entreprise_individuelle'] },
-  { kw: ['scenario', 'conjoncture'],      field: 'scenario_economique', values: ['normal', 'degrade', 'severe'] },
-  { kw: ['rate type', 'type taux'],       field: 'type_taux',           values: ['fixe', 'variable'] },
-  { kw: ['objective', 'objectif', 'financing'], field: 'objectif_financement', values: ['investissement', 'exploitation', 'expansion'] },
+  { kw: ['region'],                              field: 'region_localisation', values: ['Centre', 'Nord', 'Sud', 'Est', 'Ouest', 'Littoral'] },
+  { kw: ['sector', 'secteur'],                   field: 'secteur_activite',    values: ['commerce', 'agriculture', 'btp', 'industrie', 'services', 'tourisme'] },
+  { kw: ['zone'],                                field: 'zone_localisation',   values: ['urbaine', 'rurale', 'industrielle'] },
+  { kw: ['classification', 'size', 'taille'],    field: 'classification_pme',  values: ['micro', 'petite', 'moyenne'] },
+  { kw: ['legal', 'juridique', 'structure'],     field: 'structure_juridique', values: ['SARL', 'SA', 'Entreprise_individuelle'] },
+  { kw: ['scenario', 'conjoncture'],             field: 'scenario_economique', values: ['normal', 'degrade', 'severe'] },
+  { kw: ['rate type', 'type taux', 'type de taux'], field: 'type_taux',        values: ['fixe', 'variable'] },
+  { kw: ['objective', 'objectif', 'financing'],  field: 'objectif_financement', values: ['investissement', 'exploitation', 'expansion'] },
 ];
 
 function parseWhatIf(message, features) {
   const changes = {};
-  const text = ` ${message.toLowerCase()} `;
+  const text = stripAccents(` ${message.toLowerCase()} `);
 
   for (const c of WHATIF_CAT) {
-    if (!c.kw.some(k => text.includes(k))) continue;
+    if (!c.kw.some(k => text.includes(stripAccents(k)))) continue;
     for (const v of c.values) {
-      if (new RegExp(`\\b${v.toLowerCase()}\\b`).test(text)) { changes[c.field] = v; break; }
+      if (new RegExp(`\\b${stripAccents(v.toLowerCase())}\\b`).test(text)) { changes[c.field] = v; break; }
     }
   }
 
   for (const m of WHATIF_NUM) {
-    const kw = m.kw.find(k => text.includes(k));
+    const kw = m.kw.find(k => text.includes(stripAccents(k)));
     if (!kw) continue;
     const base = features && typeof features[m.field] === 'number' ? features[m.field] : null;
-    const win = text.slice(text.indexOf(kw), text.indexOf(kw) + 70);
+    const win = text.slice(text.indexOf(stripAccents(kw)), text.indexOf(stripAccents(kw)) + 70);
 
     const pctM = win.match(/(-?\d+(?:\.\d+)?)\s*%/);
-    const absM = win.match(/(?:to|=|at)\s*([\d.,]+)\s*(k|m|million|thousand)?/);
+    const absM = win.match(/(?:to|=|at|a)\s*([\d.,]+)\s*(k|m|million|millions|mille)?/);
 
     if (pctM && base != null) {
       const signed = parseFloat(pctM[1]);
       const p = Math.abs(signed) / 100;
-      const down = /(drop|decrease|reduce|fall|fell|lower|decline|cut|loses?|shrink|down)/.test(win);
-      const up = /(increase|rise|rises|grow|grew|higher|gain|jump|surge|\bup\b)/.test(win);
+      const down = /(drop|decrease|reduce|fall|fell|lower|decline|cut|loses?|shrink|down|baisse|baisser|diminue|diminuer|recule|reduit|chute|effondr)/.test(win);
+      const up = /(increase|rise|rises|grow|grew|higher|gain|jump|surge|\bup\b|augmente|augmenter|hausse|monte|grimpe|progresse|accroit)/.test(win);
       const goesDown = signed < 0 || (down && !up);
       changes[m.field] = +(base * (goesDown ? 1 - p : 1 + p)).toFixed(4);
     } else if (absM) {
       let val = parseFloat(absM[1].replace(/,/g, ''));
       const unit = absM[2];
-      if (unit === 'k' || unit === 'thousand') val *= 1e3;
-      if (unit === 'm' || unit === 'million') val *= 1e6;
+      if (unit === 'k' || unit === 'mille') val *= 1e3;
+      if (unit === 'm' || unit === 'million' || unit === 'millions') val *= 1e6;
       if (!isNaN(val)) changes[m.field] = val;
     }
   }
@@ -579,7 +639,7 @@ function showDetected(changes) {
   const keys = Object.keys(changes);
   if (!keys.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
   box.classList.remove('hidden');
-  box.innerHTML = `<div class="wd-title">Will re-run with:</div>` +
+  box.innerHTML = `<div class="wd-title">Sera relancé avec :</div>` +
     keys.map(k => `<span class="wd-chip">${k} = ${changes[k]}</span>`).join('');
 }
 
@@ -594,14 +654,14 @@ function addScenarioCard(s) {
   const div = document.createElement('div');
   div.className = 'chat-msg assistant';
   div.innerHTML = `<div class="msg-bubble scenario-card">
-    <div class="sc-title">🔮 Model re-run with your what-if</div>
+    <div class="sc-title">🔮 Modèle relancé avec votre scénario hypothétique</div>
     <div class="sc-changes">${changed}</div>
     <div class="sc-flow">
-      <div class="sc-cell"><span class="sc-lbl">Baseline PD</span><span class="sc-val">${pct(s.baseline_pd)}</span><span class="sc-rc">${s.baseline_risk_class}</span></div>
+      <div class="sc-cell"><span class="sc-lbl">PD de Base</span><span class="sc-val">${pct(s.baseline_pd)}</span><span class="sc-rc">${RISK_LABEL_FR[s.baseline_risk_class] || s.baseline_risk_class}</span></div>
       <div class="sc-arrow ${cls}">${arrow}</div>
-      <div class="sc-cell"><span class="sc-lbl">New PD</span><span class="sc-val">${pct(s.scenario_pd)}</span><span class="sc-rc">${s.scenario_risk_class}</span></div>
+      <div class="sc-cell"><span class="sc-lbl">Nouvelle PD</span><span class="sc-val">${pct(s.scenario_pd)}</span><span class="sc-rc">${RISK_LABEL_FR[s.scenario_risk_class] || s.scenario_risk_class}</span></div>
     </div>
-    <div class="sc-delta ${cls}">Δ ${s.delta_pd >= 0 ? '+' : ''}${(s.delta_pd * 100).toFixed(1)} pts ${dir === 'up' ? '(riskier)' : dir === 'down' ? '(safer)' : '(no change)'}</div>
+    <div class="sc-delta ${cls}">Δ ${s.delta_pd >= 0 ? '+' : ''}${(s.delta_pd * 100).toFixed(1)} pts ${dir === 'up' ? '(plus risqué)' : dir === 'down' ? '(plus sûr)' : '(aucun changement)'}</div>
   </div>`;
   const welcome = chatMessages.querySelector('.chat-welcome');
   if (welcome) welcome.remove();
@@ -615,9 +675,9 @@ async function sendChat(message) {
   const featText = document.getElementById('llmFeaturesInput').value.trim();
   let features = lastFeatures;
   if (featText) {
-    try { features = JSON.parse(featText); } catch { toast('Invalid JSON in client data', 'error'); return; }
+    try { features = JSON.parse(featText); } catch { toast('JSON invalide dans les données client', 'error'); return; }
   }
-  if (!features) { toast('No client data loaded. Fill prediction form or paste JSON.', 'error'); return; }
+  if (!features) { toast('Aucune donnée client chargée. Remplissez le formulaire de prédiction ou collez du JSON.', 'error'); return; }
 
   // Build what-if overrides: natural language + explicit box (box wins).
   const parsed = parseWhatIf(message, features);
@@ -626,9 +686,9 @@ async function sendChat(message) {
   const hasScenario = Object.keys(scenarioChanges).length > 0;
   showDetected(scenarioChanges);
 
-  const looksWhatIf = /\bwhat\s*if\b|\bif\b.*\b(change|increase|decrease|drop|rise|becomes?)\b/.test(message.toLowerCase());
+  const looksWhatIf = /\bwhat\s*if\b|\bif\b.*\b(change|increase|decrease|drop|rise|becomes?)\b|\bet si\b|\bsi\b.*\b(change|augmente|diminue|baisse)\b/.test(message.toLowerCase());
   if (!hasScenario && looksWhatIf) {
-    toast('Could not auto-detect the change — set it in the What-if box, e.g. region_localisation=Sud', 'error');
+    toast('Impossible de détecter automatiquement le changement — indiquez-le dans la zone Scénario Hypothétique, ex. region_localisation=Sud', 'error');
   }
 
   const btn = document.getElementById('btnSendChat');
@@ -655,18 +715,25 @@ async function sendChat(message) {
     const scenario = result.tool_results?.scenario;
     if (scenario) addScenarioCard(scenario);
 
+    const explanation = result.tool_results?.explanation;
+    if (explanation?.top_contributions) {
+      renderInfluentialList('llmInfluentialList', explanation.top_contributions);
+      renderInfluentialList('shapInfluentialList', explanation.top_contributions);
+      updateStressParamsFromShap(explanation.top_contributions);
+    }
+
     // Prefer whatever the backend returned (LLM summary, or a graceful note if the LLM failed).
     let text = result.llm_summary;
     if (!text) {
       const p = result.tool_results?.prediction;
       text = p
-        ? `Computed PD: ${(p.probability_default * 100).toFixed(1)}% — risk class “${p.risk_class}”.`
-        : `Computed output: ${JSON.stringify(result.tool_results, null, 2)}`;
+        ? `PD calculée : ${(p.probability_default * 100).toFixed(1)}% — classe de risque « ${RISK_LABEL_FR[p.risk_class] || p.risk_class} ».`
+        : `Résultat calculé : ${JSON.stringify(result.tool_results, null, 2)}`;
     }
     addMessage('assistant', text);
   } catch (err) {
     thinking.remove();
-    addMessage('assistant', `⚠️ Error: ${err.message}`);
+    addMessage('assistant', `⚠️ Erreur : ${err.message}`);
   } finally {
     btn.disabled = false;
   }
@@ -684,21 +751,21 @@ document.querySelectorAll('.suggestion-chip').forEach(c =>
 document.getElementById('btnLlmLoadLast').addEventListener('click', () => {
   if (lastFeatures) {
     document.getElementById('llmFeaturesInput').value = JSON.stringify(lastFeatures, null, 2);
-    toast('Client data loaded', 'success');
+    toast('Données client chargées', 'success');
   } else {
-    toast('No prediction run yet', 'error');
+    toast('Aucune prédiction encore lancée', 'error');
   }
 });
 document.getElementById('btnClearChat').addEventListener('click', () => {
   chatMessages.innerHTML = `
     <div class="chat-welcome">
       <div class="chat-welcome-icon">🤖</div>
-      <div class="chat-welcome-title">BFPME Credit Analyst</div>
-      <div class="chat-welcome-sub">Ask me anything about a client's credit risk profile</div>
+      <div class="chat-welcome-title">Analyste Crédit BFPME</div>
+      <div class="chat-welcome-sub">Posez-moi n'importe quelle question sur le profil de risque de crédit d'un client</div>
       <div class="chat-suggestions">
-        <button class="suggestion-chip" data-msg="Is this client high risk? Summarise the key risk drivers.">Is this client high risk?</button>
-        <button class="suggestion-chip" data-msg="What actions could improve this client's default probability?">How to improve the score?</button>
-        <button class="suggestion-chip" data-msg="Explain the top 3 factors that increase the risk for this client.">Top risk factors?</button>
+        <button class="suggestion-chip" data-msg="Ce client est-il à haut risque ? Résumez les principaux facteurs de risque.">Ce client est-il à haut risque ?</button>
+        <button class="suggestion-chip" data-msg="Quelles actions pourraient améliorer la probabilité de défaut de ce client ?">Comment améliorer le score ?</button>
+        <button class="suggestion-chip" data-msg="Expliquez les 3 principaux facteurs qui augmentent le risque pour ce client.">Principaux facteurs de risque ?</button>
       </div>
     </div>`;
   document.querySelectorAll('.suggestion-chip').forEach(c =>
@@ -710,18 +777,89 @@ document.getElementById('btnClearChat').addEventListener('click', () => {
 // MONTE CARLO PAGE  (backend /monte-carlo engine)
 // ══════════════════════════════════════════════════════════════════════════
 
-// Slider labels
-[
-  ['sliderRev',   'spRevPct'],
-  ['sliderDebt',  'spDebtPct'],
-  ['sliderColl',  'spCollPct'],
-  ['sliderDelay', 'spDelayPct'],
-  ['sliderGdp',   'spGdpPct'],
-].forEach(([sid, lid]) => {
-  const sl = document.getElementById(sid);
-  const lb = document.getElementById(lid);
-  sl.addEventListener('input', () => { lb.textContent = `±${sl.value}%`; });
-});
+// Fields safe to stress-test: genuine RAW inputs only. Engineered ratios
+// (payment_stress_index, garantie_to_loan, cash_to_debt, ...) are excluded
+// on purpose — the backend re-derives them from the raw fields on every
+// simulated draw (monte_carlo_service.apply_feature_engineering), so
+// shocking the ratio directly would just get silently overwritten.
+const SHOCKABLE_FIELDS = {
+  chiffre_affaires_annuel:       { label: "Chiffre d'Affaires Annuel",        max: 50, pct: 20 },
+  dettes_court_terme:            { label: 'Dettes à Court Terme',             max: 60, pct: 25 },
+  valeur_garanties:              { label: 'Valeur des Garanties',             max: 50, pct: 15 },
+  retards_paiement_jours_moyen:  { label: 'Retards de Paiement',              max: 80, pct: 30 },
+  croissance_pib:                { label: 'Croissance du PIB',                max: 80, pct: 40 },
+  tresorerie_disponible:         { label: 'Trésorerie Disponible',            max: 60, pct: 25 },
+  fonds_roulement_fdr:           { label: 'Fonds de Roulement (FDR)',         max: 60, pct: 25 },
+  capitaux_propres:              { label: 'Capitaux Propres',                 max: 50, pct: 20 },
+  nombre_employes:               { label: 'Employés',                        max: 40, pct: 15 },
+  total_passif:                  { label: 'Total Passif',                    max: 50, pct: 20 },
+  total_actif:                   { label: 'Total Actif',                     max: 50, pct: 20 },
+  taux_interet_teg:              { label: "Taux d'Intérêt TEG",              max: 40, pct: 15 },
+  apport_personnel:              { label: 'Apport Personnel',                 max: 50, pct: 20 },
+  montant_total_investissement:  { label: 'Investissement Total',             max: 50, pct: 20 },
+  montant_pret:                  { label: 'Montant du Prêt',                  max: 40, pct: 15 },
+  montant_impayes:                { label: 'Montant des Impayés',             max: 90, pct: 40 },
+  dettes_long_terme:             { label: 'Dettes à Long Terme',              max: 60, pct: 25 },
+  besoin_fonds_roulement_bfr:    { label: 'Besoin en Fonds de Roulement (BFR)', max: 60, pct: 25 },
+  taux_inflation:                { label: "Taux d'Inflation",                max: 70, pct: 30 },
+  taux_directeur:                { label: 'Taux Directeur',                   max: 70, pct: 30 },
+  taux_chomage:                  { label: 'Taux de Chômage',                  max: 50, pct: 20 },
+  risque_sectoriel:              { label: 'Risque Sectoriel',                 max: 50, pct: 20 },
+  risque_pays_region:            { label: 'Risque Pays/Région',               max: 50, pct: 20 },
+  anciennete_entreprise:         { label: "Âge de l'Entreprise",             max: 40, pct: 15 },
+  capital_social:                { label: 'Capital Social',                   max: 50, pct: 20 },
+  duree_mois:                    { label: 'Durée du Prêt',                    max: 40, pct: 15 },
+};
+
+const DEFAULT_STRESS_FIELDS = [
+  'chiffre_affaires_annuel', 'dettes_court_terme', 'valeur_garanties',
+  'retards_paiement_jours_moyen', 'croissance_pib'
+];
+
+// Build the stress-parameter sliders for the given raw field names.
+function renderStressParams(fieldNames) {
+  const container = document.getElementById('stressParamsContainer');
+  container.innerHTML = fieldNames.map(field => {
+    const cfg = SHOCKABLE_FIELDS[field];
+    if (!cfg) return '';
+    return `<div class="stress-param">
+      <div class="sp-row">
+        <span class="sp-label">${cfg.label}</span>
+        <span class="sp-pct">±${cfg.pct}%</span>
+      </div>
+      <input type="range" class="stress-slider" min="0" max="${cfg.max}" value="${cfg.pct}" data-field="${field}" />
+    </div>`;
+  }).join('');
+  container.querySelectorAll('.stress-slider').forEach(sl => {
+    const pctLabel = sl.closest('.stress-param').querySelector('.sp-pct');
+    sl.addEventListener('input', () => { pctLabel.textContent = `±${sl.value}%`; });
+  });
+}
+
+// Once a SHAP explanation is available, swap the default stress fields for
+// the top SHAP-ranked fields for THIS client — but only the ones that are
+// genuine raw inputs (see SHOCKABLE_FIELDS comment above), so the sliders
+// stay meaningful for the client actually loaded rather than a fixed list.
+function updateStressParamsFromShap(contribs) {
+  const matched = [];
+  for (const c of contribs) {
+    const name = c.feature.replace(/^(plain_num__|winsor_num__|cat__|ord__|nom__)/, '');
+    if (SHOCKABLE_FIELDS[name] && !matched.includes(name)) matched.push(name);
+    if (matched.length >= 5) break;
+  }
+  const hint = document.getElementById('stressParamsSource');
+  if (matched.length >= 2) {
+    renderStressParams(matched);
+    hint.textContent = 'Basé sur les variables SHAP les plus influentes pour ce client.';
+  } else {
+    renderStressParams(DEFAULT_STRESS_FIELDS);
+    hint.textContent = 'Variables par défaut — lancez une explication SHAP pour les adapter à ce client.';
+  }
+}
+
+renderStressParams(DEFAULT_STRESS_FIELDS);
+document.getElementById('stressParamsSource').textContent =
+  'Variables par défaut — lancez une explication SHAP (onglet SHAP) pour les adapter à ce client.';
 
 // Sim count buttons
 let simCount = 2000;
@@ -742,14 +880,14 @@ function getShocks() {
 
 document.getElementById('btnRunMC').addEventListener('click', async () => {
   const base = lastFeatures;
-  if (!base) { toast('Run a prediction first to set the base client.', 'error'); return; }
+  if (!base) { toast('Lancez d\'abord une prédiction pour définir le client de base.', 'error'); return; }
 
   const shocks = getShocks();
-  if (!shocks.length) { toast('Set at least one stress band above 0%.', 'error'); return; }
+  if (!shocks.length) { toast('Définissez au moins une bande de stress supérieure à 0%.', 'error'); return; }
 
   const btn = document.getElementById('btnRunMC');
   btn.disabled = true;
-  btn.innerHTML = '<span class="btn-icon">⏳</span> Running…';
+  btn.innerHTML = '<span class="btn-icon">⏳</span> En cours…';
 
   const progress    = document.getElementById('mcProgress');
   const progressBar = document.getElementById('mcProgressBar');
@@ -777,13 +915,13 @@ document.getElementById('btnRunMC').addEventListener('click', async () => {
     progressBar.style.width = '100%'; progressLbl.textContent = '100%';
     renderMCResults(result);
     progress.classList.add('hidden');
-    toast(`${result.n_simulations} simulations complete`, 'success');
+    toast(`${result.n_simulations} simulations terminées`, 'success');
   } catch (err) {
     clearInterval(tick);
     toast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<span class="btn-icon">🎲</span> Run Simulation';
+    btn.innerHTML = '<span class="btn-icon">🎲</span> Lancer la Simulation';
     progressBar.style.width = '0%';
   }
 });
@@ -808,14 +946,14 @@ function renderMCResults(r) {
   const mean = r.mean_pd;
   const lvl  = mean >= 0.7 ? 'high' : mean >= 0.4 ? 'medium' : 'low';
   const icon = lvl === 'high' ? '🔴' : lvl === 'medium' ? '🟠' : '🟢';
-  const tone = lvl === 'high' ? 'severe stress' : lvl === 'medium' ? 'elevated stress' : 'resilience';
+  const tone = lvl === 'high' ? 'un stress sévère' : lvl === 'medium' ? 'un stress élevé' : 'une bonne résilience';
   verdict.className = `mc-verdict mc-verdict-${lvl}`;
   verdict.innerHTML =
-    `${icon} Baseline PD <strong>${fmt(r.baseline_pd)}</strong>. Across <strong>${r.n_simulations}</strong> ` +
-    `simulated scenarios the client shows <strong>${tone}</strong>: mean PD <strong>${fmt(mean)}</strong> ` +
-    `(σ = ${(r.std_pd * 100).toFixed(1)}%). In the worst 5% of outcomes, PD hits <strong>${fmt(r.var_95)}</strong> ` +
-    `(VaR-95) and averages <strong>${fmt(r.expected_shortfall_95)}</strong> (ES-95). ` +
-    `<strong>${(r.prob_exceeds_threshold * 100).toFixed(0)}%</strong> of scenarios breach the decision threshold (${r.threshold}).` +
+    `${icon} PD de base <strong>${fmt(r.baseline_pd)}</strong>. Sur <strong>${r.n_simulations}</strong> ` +
+    `scénarios simulés, le client montre <strong>${tone}</strong> : PD moyenne <strong>${fmt(mean)}</strong> ` +
+    `(σ = ${(r.std_pd * 100).toFixed(1)}%). Dans les 5% de cas les plus défavorables, la PD atteint <strong>${fmt(r.var_95)}</strong> ` +
+    `(VaR-95) et atteint en moyenne <strong>${fmt(r.expected_shortfall_95)}</strong> (ES-95). ` +
+    `<strong>${(r.prob_exceeds_threshold * 100).toFixed(0)}%</strong> des scénarios franchissent le seuil de décision (${r.threshold}).` +
     (r.notes && r.notes.length ? `<div class="mc-note">${r.notes.join(' ')}</div>` : '');
 
   // Histogram — backend-provided edges/counts
@@ -835,10 +973,10 @@ function renderMCResults(r) {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} scenarios` } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} scénarios` } } },
       scales: {
         x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-        y: { grid: { color: '#EFF6FF' }, title: { display: true, text: 'Count', font: { size: 11 } } }
+        y: { grid: { color: '#EFF6FF' }, title: { display: true, text: 'Nombre', font: { size: 11 } } }
       }
     }
   });
@@ -848,7 +986,7 @@ function renderMCResults(r) {
   makeChart('chartMCRisk', {
     type: 'doughnut',
     data: {
-      labels: ['Low', 'Medium', 'High'],
+      labels: ['Faible', 'Moyen', 'Élevé'],
       datasets: [{
         data: [rd.low, rd.medium, rd.high],
         backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
@@ -873,7 +1011,7 @@ function renderMCResults(r) {
       <td>#${s.index}</td>
       <td>${inputs || '—'}</td>
       <td><strong>${(s.probability_default * 100).toFixed(1)}%</strong></td>
-      <td><span class="${cls}">${s.risk_class.toUpperCase()}</span></td>
+      <td><span class="${cls}">${RISK_LABEL_FR[s.risk_class] || s.risk_class.toUpperCase()}</span></td>
     </tr>`;
   }).join('');
 }

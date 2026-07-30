@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BFPME · Credit Risk Platform</title>
-  <link rel="stylesheet" href="/dashboard/static/styles.css" />
+  <title>Plateforme de Risque de Crédit pilotée par l'IA pour Banques</title>
+  <link rel="stylesheet" href="/dashboard/static/styles.css?v=6" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -27,24 +27,23 @@
         </svg>
       </span>
       <span class="brand-text">
-        <span class="brand-name">BFPME</span>
-        <span class="brand-sub">Risk Platform</span>
+        <span class="brand-name">Plateforme de Risque de Crédit</span>
+        <span class="brand-sub">pilotée par l'IA · pour Banques</span>
       </span>
     </div>
 
     <div class="nav-pills">
-      <button class="nav-pill active" data-page="home"><span class="pill-ico">⌂</span> Home</button>
-      <button class="nav-pill" data-page="prediction"><span class="pill-ico">◷</span> Risk Prediction</button>
-      <button class="nav-pill" data-page="shap"><span class="pill-ico">◔</span> SHAP Analysis</button>
-      <button class="nav-pill" data-page="llm"><span class="pill-ico">✦</span> LLM Assistant</button>
+      <button class="nav-pill active" data-page="home"><span class="pill-ico">⌂</span> Accueil</button>
+      <button class="nav-pill" data-page="prediction"><span class="pill-ico">◷</span> Prédiction du Risque</button>
+      <button class="nav-pill" data-page="shap"><span class="pill-ico">◔</span> Analyse SHAP</button>
+      <button class="nav-pill" data-page="llm"><span class="pill-ico">✦</span> Assistant IA</button>
       <button class="nav-pill" data-page="montecarlo"><span class="pill-ico">⁂</span> Monte Carlo</button>
-      <button class="nav-pill" data-page="ifrs9"><span class="pill-ico">▤</span> IFRS 9</button>
     </div>
 
     <div class="topbar-right">
       <span class="status-dot" id="statusDot"></span>
-      <span class="status-label" id="statusLabel">Connecting…</span>
-      <input class="api-input" id="apiBase" type="text" value="http://127.0.0.1:8000" title="API Base URL" />
+      <span class="status-label" id="statusLabel">Connexion…</span>
+      <input class="api-input" id="apiBase" type="text" value="http://127.0.0.1:8000" title="URL de base de l'API" />
     </div>
   </nav>
 
@@ -55,33 +54,33 @@
     <section class="page active" id="page-home">
       <div class="home-hero">
         <div class="hero-text">
-          <h1>Portfolio Data Overview</h1>
-          <p>Exploratory snapshot of the SME credit dataset behind the scoring model</p>
+          <h1>Aperçu des Données du Portefeuille</h1>
+          <p>Aperçu exploratoire du jeu de données de crédit PME derrière le modèle de scoring</p>
         </div>
-        <div class="hero-chip" id="heroChip">Synthetic dataset · live</div>
+        <div class="hero-chip" id="heroChip">Jeu de données synthétique · en direct</div>
       </div>
 
       <!-- KPI strip -->
       <div class="kpi-row">
         <div class="kpi-card shimmer" id="kpiRows">
           <div class="kpi-ico kpi-ico-blue">▦</div>
-          <div class="kpi-body"><div class="kpi-value" id="kpiRowsVal">—</div><div class="kpi-label">Total Records</div></div>
+          <div class="kpi-body"><div class="kpi-value" id="kpiRowsVal">—</div><div class="kpi-label">Total des Dossiers</div></div>
         </div>
         <div class="kpi-card shimmer" id="kpiFeats">
           <div class="kpi-ico kpi-ico-violet">⛁</div>
-          <div class="kpi-body"><div class="kpi-value" id="kpiFeatsVal">—</div><div class="kpi-label">Features</div></div>
+          <div class="kpi-body"><div class="kpi-value" id="kpiFeatsVal">—</div><div class="kpi-label">Variables</div></div>
         </div>
         <div class="kpi-card shimmer" id="kpiDefault">
           <div class="kpi-ico kpi-ico-amber">⚠</div>
-          <div class="kpi-body"><div class="kpi-value" id="kpiDefaultVal">—</div><div class="kpi-label">Default Rate</div></div>
+          <div class="kpi-body"><div class="kpi-value" id="kpiDefaultVal">—</div><div class="kpi-label">Taux de Défaut</div></div>
         </div>
         <div class="kpi-card shimmer" id="kpiSectors">
           <div class="kpi-ico kpi-ico-green">◴</div>
-          <div class="kpi-body"><div class="kpi-value" id="kpiSectorsVal">—</div><div class="kpi-label">Sectors Covered</div></div>
+          <div class="kpi-body"><div class="kpi-value" id="kpiSectorsVal">—</div><div class="kpi-label">Secteurs Couverts</div></div>
         </div>
         <div class="kpi-card shimmer" id="kpiComplete">
           <div class="kpi-ico kpi-ico-teal">✓</div>
-          <div class="kpi-body"><div class="kpi-value" id="kpiCompleteVal">—</div><div class="kpi-label">Data Completeness</div></div>
+          <div class="kpi-body"><div class="kpi-value" id="kpiCompleteVal">—</div><div class="kpi-label">Complétude des Données</div></div>
         </div>
       </div>
 
@@ -89,27 +88,27 @@
       <div class="eda-grid">
         <div class="chart-card span-1">
           <div class="chart-card-header">
-            <h3>Credit Risk Distribution</h3>
-            <span class="chart-badge">Target</span>
+            <h3>Distribution du Risque de Crédit</h3>
+            <span class="chart-badge">Cible</span>
           </div>
           <div class="donut-center-wrap">
             <div class="chart-container-sm"><canvas id="chartTarget"></canvas></div>
-            <div class="donut-center"><div class="dc-value" id="dcDefault">—</div><div class="dc-label">default</div></div>
+            <div class="donut-center"><div class="dc-value" id="dcDefault">—</div><div class="dc-label">défaut</div></div>
           </div>
           <div class="chart-legend" id="targetLegend"></div>
         </div>
 
         <div class="chart-card span-1">
           <div class="chart-card-header">
-            <h3>Risk Class Breakdown</h3>
-            <span class="chart-badge">BFPME rating</span>
+            <h3>Répartition par Classe de Risque</h3>
+            <span class="chart-badge">Notation BFPME</span>
           </div>
           <div class="chart-container-sm"><canvas id="chartRiskClass"></canvas></div>
         </div>
 
         <div class="chart-card span-1">
           <div class="chart-card-header">
-            <h3>Economic Scenario Mix</h3>
+            <h3>Répartition des Scénarios Économiques</h3>
             <span class="chart-badge">Macro</span>
           </div>
           <div class="chart-container-sm"><canvas id="chartScenario"></canvas></div>
@@ -117,32 +116,32 @@
 
         <div class="chart-card span-1">
           <div class="chart-card-header">
-            <h3>Sector Distribution</h3>
-            <span class="chart-badge">Activity</span>
+            <h3>Répartition par Secteur</h3>
+            <span class="chart-badge">Activité</span>
           </div>
           <div class="chart-container-sm"><canvas id="chartSector"></canvas></div>
         </div>
 
         <div class="chart-card span-1">
           <div class="chart-card-header">
-            <h3>SME Classification</h3>
-            <span class="chart-badge">Size</span>
+            <h3>Classification PME</h3>
+            <span class="chart-badge">Taille</span>
           </div>
           <div class="chart-container-sm"><canvas id="chartClassification"></canvas></div>
         </div>
 
         <div class="chart-card span-1">
           <div class="chart-card-header">
-            <h3>Regional Spread</h3>
-            <span class="chart-badge">Geography</span>
+            <h3>Répartition Régionale</h3>
+            <span class="chart-badge">Géographie</span>
           </div>
           <div class="chart-container-sm"><canvas id="chartRegion"></canvas></div>
         </div>
 
         <div class="chart-card span-3">
           <div class="chart-card-header">
-            <h3>Loan Amount Distribution</h3>
-            <span class="chart-badge">TND · trimmed at 97th pct</span>
+            <h3>Distribution du Montant des Prêts</h3>
+            <span class="chart-badge">TND · tronqué au 97e centile</span>
           </div>
           <div class="chart-container-sm"><canvas id="chartLoanHist"></canvas></div>
         </div>
@@ -152,8 +151,14 @@
     <!-- ── RISK PREDICTION ───────────────────────────────────────────────── -->
     <section class="page" id="page-prediction">
       <div class="page-header">
-        <h1>Risk Prediction</h1>
-        <p>Fill in the client profile to compute default probability</p>
+        <h1>Prédiction du Risque</h1>
+        <p>Renseignez le profil du client pour calculer la probabilité de défaut</p>
+      </div>
+
+      <div class="influential-legend">
+        <span class="label-influential">●</span>
+        Les champs en rouge sont les variables à plus fort impact de leur catégorie, selon l'analyse
+        d'importance des variables du modèle déployé — les modifier fait le plus varier la PD prédite.
       </div>
 
       <div class="pred-layout">
@@ -162,13 +167,27 @@
 
             <div class="form-group-card">
               <div class="fgc-header" data-toggle="fgc1">
-                <span class="fgc-icon">🏢</span> Company Profile
+                <span class="fgc-icon">🏢</span> Profil de l'Entreprise
                 <span class="fgc-chevron">▾</span>
               </div>
               <div class="fgc-body open" id="fgc1">
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Sector</label>
+                    <label class="label-influential" title="Variable à fort impact — importance la plus élevée dans cette catégorie (analyse d'importance des variables du modèle)">Classification</label>
+                    <select name="classification_pme">
+                      <option value="petite">Petite</option>
+                      <option value="moyenne">Moyenne</option>
+                      <option value="micro">Micro</option>
+                    </select>
+                  </div>
+                  <div class="form-field">
+                    <label class="label-influential" title="Variable à fort impact — importance la plus élevée dans cette catégorie (analyse d'importance des variables du modèle)">Employés</label>
+                    <input type="number" name="nombre_employes" value="25" min="1" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label>Secteur</label>
                     <select name="secteur_activite">
                       <option value="commerce">Commerce</option>
                       <option value="agriculture">Agriculture</option>
@@ -179,7 +198,7 @@
                     </select>
                   </div>
                   <div class="form-field">
-                    <label>Legal Structure</label>
+                    <label>Structure Juridique</label>
                     <select name="structure_juridique">
                       <option value="SARL">SARL</option>
                       <option value="SA">SA</option>
@@ -189,15 +208,7 @@
                 </div>
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Classification</label>
-                    <select name="classification_pme">
-                      <option value="petite">Petite</option>
-                      <option value="moyenne">Moyenne</option>
-                      <option value="micro">Micro</option>
-                    </select>
-                  </div>
-                  <div class="form-field">
-                    <label>Region</label>
+                    <label>Région</label>
                     <select name="region_localisation">
                       <option value="Centre">Centre</option>
                       <option value="Nord">Nord</option>
@@ -207,8 +218,6 @@
                       <option value="Littoral">Littoral</option>
                     </select>
                   </div>
-                </div>
-                <div class="form-row">
                   <div class="form-field">
                     <label>Zone</label>
                     <select name="zone_localisation">
@@ -217,31 +226,23 @@
                       <option value="industrielle">Industrielle</option>
                     </select>
                   </div>
-                  <div class="form-field">
-                    <label>Company Age (years)</label>
-                    <input type="number" name="anciennete_entreprise" value="8" min="0" />
-                  </div>
                 </div>
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Employees</label>
-                    <input type="number" name="nombre_employes" value="25" min="1" />
+                    <label>Âge de l'Entreprise (années)</label>
+                    <input type="number" name="anciennete_entreprise" value="8" min="0" />
                   </div>
                   <div class="form-field">
-                    <label>Share Capital (TND)</label>
+                    <label>Capital Social (TND)</label>
                     <input type="number" name="capital_social" value="500000" />
                   </div>
                 </div>
                 <div class="form-row">
                   <div class="form-field">
-                    <label>BFPME Global Score</label>
-                    <input type="number" name="score_bfpme_global" value="120.5" step="0.1" />
-                  </div>
-                  <div class="form-field">
-                    <label>Internal Score</label>
-                    <select name="score_global_interne">
-                      <option value="Good Financial">Good Financial</option>
-                      <option value="Average Financial">Average Financial</option>
+                    <label class="label-influential" title="Variable à fort impact — importance la plus élevée dans cette catégorie (analyse d'importance des variables du modèle)">Type de Projet</label>
+                    <select name="code_modele">
+                      <option value="1">Projet en création</option>
+                      <option value="2">Projet en extension</option>
                     </select>
                   </div>
                 </div>
@@ -250,54 +251,54 @@
 
             <div class="form-group-card">
               <div class="fgc-header" data-toggle="fgc2">
-                <span class="fgc-icon">💰</span> Financials
+                <span class="fgc-icon">💰</span> Données Financières
                 <span class="fgc-chevron">▾</span>
               </div>
               <div class="fgc-body open" id="fgc2">
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Annual Revenue (TND)</label>
+                    <label class="label-influential" title="Variable à fort impact — importance la plus élevée dans cette catégorie (analyse d'importance des variables du modèle)">Chiffre d'Affaires Annuel (TND)</label>
                     <input type="number" name="chiffre_affaires_annuel" value="2500000" />
                   </div>
                   <div class="form-field">
-                    <label>Equity (TND)</label>
+                    <label class="label-influential" title="Variable à fort impact — importance la plus élevée dans cette catégorie (analyse d'importance des variables du modèle)">Fonds de Roulement (FDR)</label>
+                    <input type="number" name="fonds_roulement_fdr" value="180000" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label class="label-influential" title="Variable à fort impact — importance la plus élevée dans cette catégorie (analyse d'importance des variables du modèle)">Trésorerie Disponible (TND)</label>
+                    <input type="number" name="tresorerie_disponible" value="110000" />
+                  </div>
+                  <div class="form-field">
+                    <label>Capitaux Propres (TND)</label>
                     <input type="number" name="capitaux_propres" value="700000" />
                   </div>
                 </div>
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Short-term Debt (TND)</label>
+                    <label>Dettes à Court Terme (TND)</label>
                     <input type="number" name="dettes_court_terme" value="150000" />
                   </div>
                   <div class="form-field">
-                    <label>Long-term Debt (TND)</label>
+                    <label>Dettes à Long Terme (TND)</label>
                     <input type="number" name="dettes_long_terme" value="300000" />
                   </div>
                 </div>
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Total Assets (TND)</label>
+                    <label>Total Actif (TND)</label>
                     <input type="number" name="total_actif" value="1900000" />
                   </div>
                   <div class="form-field">
-                    <label>Total Liabilities (TND)</label>
+                    <label>Total Passif (TND)</label>
                     <input type="number" name="total_passif" value="1200000" />
                   </div>
                 </div>
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Working Capital (FDR)</label>
-                    <input type="number" name="fonds_roulement_fdr" value="180000" />
-                  </div>
-                  <div class="form-field">
-                    <label>Working Capital Need (BFR)</label>
+                    <label>Besoin en Fonds de Roulement (BFR)</label>
                     <input type="number" name="besoin_fonds_roulement_bfr" value="90000" />
-                  </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-field">
-                    <label>Available Cash (TND)</label>
-                    <input type="number" name="tresorerie_disponible" value="110000" />
                   </div>
                 </div>
               </div>
@@ -305,50 +306,50 @@
 
             <div class="form-group-card">
               <div class="fgc-header" data-toggle="fgc3">
-                <span class="fgc-icon">🏦</span> Loan Details
+                <span class="fgc-icon">🏦</span> Détails du Prêt
                 <span class="fgc-chevron">▾</span>
               </div>
               <div class="fgc-body open" id="fgc3">
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Loan Amount (TND)</label>
-                    <input type="number" name="montant_pret" value="800000" />
-                  </div>
-                  <div class="form-field">
-                    <label>Total Investment (TND)</label>
+                    <label class="label-influential" title="Variable à fort impact — importance la plus élevée dans cette catégorie (analyse d'importance des variables du modèle)">Investissement Total (TND)</label>
                     <input type="number" name="montant_total_investissement" value="1200000" />
                   </div>
-                </div>
-                <div class="form-row">
                   <div class="form-field">
-                    <label>Personal Contribution (TND)</label>
+                    <label class="label-influential" title="Variable à fort impact — importance la plus élevée dans cette catégorie (analyse d'importance des variables du modèle)">Apport Personnel (TND)</label>
                     <input type="number" name="apport_personnel" value="200000" />
                   </div>
-                  <div class="form-field">
-                    <label>Collateral Value (TND)</label>
-                    <input type="number" name="valeur_garanties" value="900000" />
-                  </div>
                 </div>
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Duration (months)</label>
-                    <input type="number" name="duree_mois" value="48" min="1" />
-                  </div>
-                  <div class="form-field">
-                    <label>Interest Rate TEG (%)</label>
+                    <label class="label-influential" title="Variable à fort impact — importance la plus élevée dans cette catégorie (analyse d'importance des variables du modèle)">Taux d'Intérêt TEG (%)</label>
                     <input type="number" name="taux_interet_teg" value="8.4" step="0.1" />
                   </div>
+                  <div class="form-field">
+                    <label>Montant du Prêt (TND)</label>
+                    <input type="number" name="montant_pret" value="800000" />
+                  </div>
                 </div>
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Rate Type</label>
+                    <label>Valeur des Garanties (TND)</label>
+                    <input type="number" name="valeur_garanties" value="900000" />
+                  </div>
+                  <div class="form-field">
+                    <label>Durée (mois)</label>
+                    <input type="number" name="duree_mois" value="48" min="1" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label>Type de Taux</label>
                     <select name="type_taux">
                       <option value="fixe">Fixe</option>
                       <option value="variable">Variable</option>
                     </select>
                   </div>
                   <div class="form-field">
-                    <label>Financing Objective</label>
+                    <label>Objectif de Financement</label>
                     <select name="objectif_financement">
                       <option value="investissement">Investissement</option>
                       <option value="exploitation">Exploitation</option>
@@ -361,57 +362,57 @@
 
             <div class="form-group-card">
               <div class="fgc-header" data-toggle="fgc4">
-                <span class="fgc-icon">⚠️</span> Risk Indicators
+                <span class="fgc-icon">⚠️</span> Indicateurs de Risque
                 <span class="fgc-chevron">▾</span>
               </div>
               <div class="fgc-body open" id="fgc4">
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Avg Payment Delay (days)</label>
+                    <label class="label-influential" title="Variable à fort impact — importance la plus élevée dans cette catégorie (analyse d'importance des variables du modèle)">Retard de Paiement Moyen (jours)</label>
                     <input type="number" name="retards_paiement_jours_moyen" value="12" min="0" />
                   </div>
                   <div class="form-field">
-                    <label>Unpaid Amount (TND)</label>
-                    <input type="number" name="montant_impayes" value="15000" min="0" />
-                  </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-field">
-                    <label>Sector Risk (1–100)</label>
-                    <input type="number" name="risque_sectoriel" value="28" min="0" max="100" />
-                  </div>
-                  <div class="form-field">
-                    <label>Country/Region Risk (1–100)</label>
+                    <label class="label-influential" title="Variable à fort impact — importance la plus élevée dans cette catégorie (analyse d'importance des variables du modèle)">Risque Pays/Région (1–100)</label>
                     <input type="number" name="risque_pays_region" value="24" min="0" max="100" />
                   </div>
                 </div>
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Economic Scenario</label>
+                    <label class="label-influential" title="Variable à fort impact — importance la plus élevée dans cette catégorie (analyse d'importance des variables du modèle)">Taux d'Inflation (%)</label>
+                    <input type="number" name="taux_inflation" value="5.2" step="0.1" />
+                  </div>
+                  <div class="form-field">
+                    <label>Montant des Impayés (TND)</label>
+                    <input type="number" name="montant_impayes" value="15000" min="0" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label>Risque Sectoriel (1–100)</label>
+                    <input type="number" name="risque_sectoriel" value="28" min="0" max="100" />
+                  </div>
+                  <div class="form-field">
+                    <label>Scénario Économique</label>
                     <select name="scenario_economique">
                       <option value="normal">Normal</option>
                       <option value="degrade">Dégradé</option>
                       <option value="severe">Sévère</option>
                     </select>
                   </div>
-                  <div class="form-field">
-                    <label>Inflation Rate (%)</label>
-                    <input type="number" name="taux_inflation" value="5.2" step="0.1" />
-                  </div>
                 </div>
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Central Bank Rate (%)</label>
+                    <label>Taux Directeur (%)</label>
                     <input type="number" name="taux_directeur" value="6.0" step="0.1" />
                   </div>
                   <div class="form-field">
-                    <label>GDP Growth (%)</label>
+                    <label>Croissance du PIB (%)</label>
                     <input type="number" name="croissance_pib" value="2.1" step="0.1" />
                   </div>
                 </div>
                 <div class="form-row">
                   <div class="form-field">
-                    <label>Unemployment Rate (%)</label>
+                    <label>Taux de Chômage (%)</label>
                     <input type="number" name="taux_chomage" value="11.8" step="0.1" />
                   </div>
                 </div>
@@ -419,9 +420,9 @@
             </div>
 
             <!-- hidden fixed fields -->
-            <input type="hidden" name="code_modele" value="1" />
+            <input type="hidden" name="score_bfpme_global" value="120.5" />
+            <input type="hidden" name="score_global_interne" value="Good Financial" />
             <input type="hidden" name="risk_class" value="Moyen" />
-            <input type="hidden" name="bfpme_risk_index" value="0.4" />
             <input type="hidden" name="duree_credit" value="moyen_terme" />
             <input type="hidden" name="type_credit" value="moyen_terme" />
             <input type="hidden" name="cofinancement" value="1" />
@@ -429,9 +430,9 @@
             <input type="hidden" name="frais_annexes" value="12000" />
 
             <div class="form-actions">
-              <button type="button" class="btn-secondary" id="btnReset">Reset</button>
+              <button type="button" class="btn-secondary" id="btnReset">Réinitialiser</button>
               <button type="submit" class="btn-primary" id="btnPredict">
-                <span class="btn-icon">▶</span> Run Prediction
+                <span class="btn-icon">▶</span> Lancer la Prédiction
               </button>
             </div>
           </form>
@@ -440,12 +441,12 @@
         <div class="pred-result-col">
           <div class="result-placeholder" id="resultPlaceholder">
             <div class="placeholder-icon">📋</div>
-            <div class="placeholder-text">Fill in the form and run prediction</div>
+            <div class="placeholder-text">Renseignez le formulaire et lancez la prédiction</div>
           </div>
 
           <div class="result-panel hidden" id="resultPanel">
             <div class="result-header">
-              <h3>Prediction Result</h3>
+              <h3>Résultat de la Prédiction</h3>
               <span class="result-badge" id="riskBadge">—</span>
             </div>
 
@@ -453,7 +454,7 @@
               <canvas id="chartGauge" width="220" height="130"></canvas>
               <div class="gauge-label">
                 <div class="gauge-pct" id="gaugePct">—%</div>
-                <div class="gauge-sub">Probability of Default</div>
+                <div class="gauge-sub">Probabilité de Défaut</div>
               </div>
             </div>
 
@@ -463,18 +464,31 @@
                 <span class="rstat-value danger" id="resPD">—</span>
               </div>
               <div class="rstat">
-                <span class="rstat-label">P(Non-Default)</span>
+                <span class="rstat-label">P(Non-Défaut)</span>
                 <span class="rstat-value success" id="resPND">—</span>
               </div>
               <div class="rstat">
-                <span class="rstat-label">Threshold</span>
+                <span class="rstat-label">Seuil
+                  <span class="info-tip">
+                    <span class="info-tip-icon" role="button" tabindex="0" aria-label="Qu'est-ce que le seuil ?">ⓘ</span>
+                    <span class="info-tip-bubble">
+                      Seuil de décision : PD à partir de laquelle le client bascule en classe
+                      « risque élevé » (prediction = 1). Il n'est pas calculé par le modèle —
+                      c'est un paramètre de politique de risque fixé par la banque
+                      (DEFAULT_THRESHOLD, configurable côté serveur ou par appel API), reflétant
+                      son appétence au risque : un seuil bas classe plus de clients comme risqués
+                      (moins de défauts manqués, plus de faux positifs) ; un seuil haut fait
+                      l'inverse.
+                    </span>
+                  </span>
+                </span>
                 <span class="rstat-value" id="resThr">—</span>
               </div>
             </div>
 
             <div class="result-actions">
-              <button class="btn-outline" id="btnGoShap">Run SHAP Analysis →</button>
-              <button class="btn-outline" id="btnGoLLM">Ask LLM →</button>
+              <button class="btn-outline" id="btnGoShap">Lancer l'Analyse SHAP →</button>
+              <button class="btn-outline" id="btnGoLLM">Interroger l'IA →</button>
             </div>
           </div>
         </div>
@@ -484,40 +498,51 @@
     <!-- ── SHAP ANALYSIS ──────────────────────────────────────────────────── -->
     <section class="page" id="page-shap">
       <div class="page-header">
-        <h1>SHAP Explanation</h1>
-        <p>Feature contributions that drove the last prediction</p>
+        <h1>Explication SHAP</h1>
+        <p>Contributions des variables ayant déterminé la dernière prédiction</p>
       </div>
 
       <div class="shap-layout">
         <div class="shap-controls">
           <div class="shap-info-box">
             <span class="shap-info-icon">ℹ️</span>
-            Use the <strong>Risk Prediction</strong> tab to load client data, then come back here.
-            Or click <strong>Explain Last</strong> to analyse the last submitted client.
+            Utilisez l'onglet <strong>Prédiction du Risque</strong> pour charger les données du client, puis revenez ici.
+            Ou cliquez sur <strong>Expliquer le Dernier</strong> pour analyser le dernier client soumis.
           </div>
           <div class="shap-top-row">
-            <label class="small-label">Top K features</label>
+            <label class="small-label">Top K variables</label>
             <input type="range" id="shapTopK" min="3" max="15" value="8" />
             <span id="shapTopKVal">8</span>
           </div>
           <button class="btn-primary full-width" id="btnExplain">
-            <span class="btn-icon">🔬</span> Explain Last Client
+            <span class="btn-icon">🔬</span> Expliquer le Dernier Client
           </button>
+
+          <div class="influential-panel">
+            <div class="influential-panel-title">Variables à plus fort impact</div>
+            <p class="influential-panel-hint">
+              Classées par magnitude SHAP pour ce client. Priorisez-les lors de la construction de
+              scénarios hypothétiques — ce sont elles qui font le plus varier la PD prédite.
+            </p>
+            <ol class="influential-list" id="shapInfluentialList">
+              <li class="influential-empty">Lancez une explication pour voir les facteurs classés ici.</li>
+            </ol>
+          </div>
         </div>
 
         <div class="shap-chart-area">
           <div class="result-placeholder" id="shapPlaceholder">
             <div class="placeholder-icon">🔬</div>
-            <div class="placeholder-text">Run a prediction first, then explain it</div>
+            <div class="placeholder-text">Lancez d'abord une prédiction, puis expliquez-la</div>
           </div>
           <div class="hidden" id="shapResult">
             <div class="shap-summary-row">
               <div class="shap-summary-card">
-                <div class="ss-label">Base Value</div>
+                <div class="ss-label">Valeur de Base</div>
                 <div class="ss-value" id="shapBase">—</div>
               </div>
               <div class="shap-summary-card">
-                <div class="ss-label">Final PD</div>
+                <div class="ss-label">PD Finale</div>
                 <div class="ss-value danger" id="shapFinal">—</div>
               </div>
             </div>
@@ -526,7 +551,7 @@
             </div>
             <div class="shap-table-wrapper">
               <table class="shap-table" id="shapTable">
-                <thead><tr><th>Feature</th><th>Value</th><th>SHAP</th><th>Direction</th></tr></thead>
+                <thead><tr><th>Variable</th><th>Valeur</th><th>SHAP</th><th>Direction</th></tr></thead>
                 <tbody></tbody>
               </table>
             </div>
@@ -538,8 +563,8 @@
     <!-- ── LLM ASSISTANT ─────────────────────────────────────────────────── -->
     <section class="page" id="page-llm">
       <div class="page-header">
-        <h1>LLM Credit Analyst</h1>
-        <p>Ask questions about a client's risk profile — powered by Qwen 2.5</p>
+        <h1>Analyste Crédit IA</h1>
+        <p>Posez des questions sur le profil de risque d'un client — propulsé par Qwen 2.5</p>
       </div>
 
       <div class="llm-layout">
@@ -547,49 +572,60 @@
           <div class="llm-sidebar-title">Options</div>
           <label class="toggle-row">
             <input type="checkbox" id="llmRunPred" checked />
-            <span class="toggle-label">Run Prediction</span>
+            <span class="toggle-label">Lancer la Prédiction</span>
           </label>
           <label class="toggle-row">
             <input type="checkbox" id="llmRunExpl" checked />
-            <span class="toggle-label">Run SHAP</span>
+            <span class="toggle-label">Lancer SHAP</span>
           </label>
           <label class="toggle-row">
             <input type="checkbox" id="llmRunVal" checked />
-            <span class="toggle-label">Validate Features</span>
+            <span class="toggle-label">Valider les Variables</span>
           </label>
           <div class="llm-divider"></div>
-          <div class="llm-sidebar-title">What-if Scenario <span class="llm-opt-tag">optional</span></div>
+          <div class="influential-panel">
+            <div class="influential-panel-title">Variables à plus fort impact</div>
+            <p class="influential-panel-hint">
+              Classées par magnitude SHAP pour ce client. Référez-vous à ces champs dans votre
+              scénario hypothétique ci-dessous pour un nouveau calcul plus pertinent.
+            </p>
+            <ol class="influential-list" id="llmInfluentialList">
+              <li class="influential-empty">Lancez SHAP (ou posez une question) pour voir les facteurs classés ici.</li>
+            </ol>
+          </div>
+          <div class="llm-divider"></div>
+          <div class="llm-sidebar-title">Scénario Hypothétique <span class="llm-opt-tag">optionnel</span></div>
           <p class="llm-sidebar-hint">
-            Ask a what-if in plain language (e.g. <em>"if the region changes to Sud"</em> or
-            <em>"inflation drops 20%"</em>) and the model is <strong>re-run</strong> with the change.
-            Or set exact overrides below.
+            Posez une question hypothétique en langage naturel (ex. <em>"si la région passe à Sud"</em> ou
+            <em>"l'inflation baisse de 20%"</em>) et le modèle est <strong>relancé</strong> avec le changement.
+            Ou définissez des valeurs exactes ci-dessous.
           </p>
           <textarea id="whatifInput" rows="2" placeholder="region_localisation=Sud, taux_inflation=4.0"></textarea>
           <div class="whatif-detected hidden" id="whatifDetected"></div>
           <div class="llm-divider"></div>
-          <div class="llm-sidebar-title">Client Data</div>
-          <p class="llm-sidebar-hint">Uses the last client from Risk Prediction, or paste JSON below.</p>
+          <div class="llm-sidebar-title">Données Client</div>
+          <p class="llm-sidebar-hint">Utilise le dernier client de Prédiction du Risque, ou collez du JSON ci-dessous.</p>
           <textarea id="llmFeaturesInput" rows="8" placeholder='{"montant_pret": 800000, ...}'></textarea>
-          <button class="btn-secondary full-width mt8" id="btnLlmLoadLast">Load Last Client</button>
+          <button class="btn-secondary full-width mt8" id="btnLlmLoadLast">Charger le Dernier Client</button>
           <div class="llm-divider"></div>
-          <button class="btn-ghost full-width" id="btnClearChat">Clear Chat</button>
+          <button class="btn-ghost full-width" id="btnClearChat">Effacer la Conversation</button>
         </div>
 
         <div class="llm-chat-col">
           <div class="chat-messages" id="chatMessages">
             <div class="chat-welcome">
               <div class="chat-welcome-icon">✦</div>
-              <div class="chat-welcome-title">BFPME Credit Analyst</div>
-              <div class="chat-welcome-sub">Ask me anything about a client's credit risk profile</div>
+              <div class="chat-welcome-title">Analyste Crédit BFPME</div>
+              <div class="chat-welcome-sub">Posez-moi n'importe quelle question sur le profil de risque de crédit d'un client</div>
               <div class="chat-suggestions">
-                <button class="suggestion-chip" data-msg="Is this client high risk? Summarise the key risk drivers.">Is this client high risk?</button>
-                <button class="suggestion-chip" data-msg="What actions could improve this client's default probability?">How to improve the score?</button>
-                <button class="suggestion-chip" data-msg="Explain the top 3 factors that increase the risk for this client.">Top risk factors?</button>
+                <button class="suggestion-chip" data-msg="Ce client est-il à haut risque ? Résumez les principaux facteurs de risque.">Ce client est-il à haut risque ?</button>
+                <button class="suggestion-chip" data-msg="Quelles actions pourraient améliorer la probabilité de défaut de ce client ?">Comment améliorer le score ?</button>
+                <button class="suggestion-chip" data-msg="Expliquez les 3 principaux facteurs qui augmentent le risque pour ce client.">Principaux facteurs de risque ?</button>
               </div>
             </div>
           </div>
           <div class="chat-input-area">
-            <textarea id="chatPrompt" rows="2" placeholder="Ask about this client's risk profile…"></textarea>
+            <textarea id="chatPrompt" rows="2" placeholder="Posez une question sur le profil de risque de ce client…"></textarea>
             <button class="btn-send" id="btnSendChat">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -604,68 +640,44 @@
     <!-- ── MONTE CARLO ────────────────────────────────────────────────────── -->
     <section class="page" id="page-montecarlo">
       <div class="page-header">
-        <h1>Monte Carlo Simulation</h1>
-        <p>Stress-test default probability across thousands of randomly sampled scenarios</p>
+        <h1>Simulation Monte Carlo</h1>
+        <p>Testez la résistance de la probabilité de défaut sur des milliers de scénarios échantillonnés aléatoirement</p>
+      </div>
+
+      <div class="mc-explainer">
+        <div class="mc-explainer-header">
+          <span class="mc-explainer-title">Pourquoi cela compte pour l'analyse de crédit</span>
+        </div>
+        <p>
+          Une PD unique masque le comportement du client sous stress. Monte Carlo relance le
+          modèle des milliers de fois sur des entrées aléatoirement perturbées pour produire une
+          distribution complète — donnant la dispersion, le risque extrême (VaR / Expected Shortfall)
+          et la probabilité de bascule de classe de risque, pas seulement un chiffre.
+          <strong>Astuce :</strong> élargissez les bandes des variables signalées à fort impact dans Prédiction du Risque / SHAP pour la simulation la plus informative.
+        </p>
       </div>
 
       <div class="mc-layout">
         <div class="mc-config-col">
           <div class="mc-card">
-            <div class="mc-card-title">Simulation Parameters</div>
-            <label class="small-label">Number of simulations</label>
+            <div class="mc-card-title">Paramètres de Simulation</div>
+            <label class="small-label">Nombre de simulations</label>
             <div class="sim-count-row">
-              <button class="sim-count-btn" data-n="1000">1,000</button>
-              <button class="sim-count-btn active" data-n="2000">2,000</button>
-              <button class="sim-count-btn" data-n="5000">5,000</button>
+              <button class="sim-count-btn" data-n="1000">1 000</button>
+              <button class="sim-count-btn active" data-n="2000">2 000</button>
+              <button class="sim-count-btn" data-n="5000">5 000</button>
             </div>
 
             <div class="mc-divider"></div>
-            <div class="mc-card-title">Stress Parameters</div>
-            <p class="small-hint">Each parameter is shocked ± its band, sampled uniformly per run. Wider bands = more uncertainty injected.</p>
+            <div class="mc-card-title">Paramètres de Stress</div>
+            <p class="small-hint">Chaque paramètre est perturbé de ± sa bande, échantillonné uniformément à chaque simulation. Bandes plus larges = plus d'incertitude injectée.</p>
+            <p class="small-hint" id="stressParamsSource"></p>
 
-            <div class="stress-param">
-              <div class="sp-row">
-                <span class="sp-label">📈 Annual Revenue</span>
-                <span class="sp-pct" id="spRevPct">±20%</span>
-              </div>
-              <input type="range" class="stress-slider" id="sliderRev" min="0" max="50" value="20" data-field="chiffre_affaires_annuel" />
-            </div>
-
-            <div class="stress-param">
-              <div class="sp-row">
-                <span class="sp-label">💳 Short-term Debt</span>
-                <span class="sp-pct" id="spDebtPct">±25%</span>
-              </div>
-              <input type="range" class="stress-slider" id="sliderDebt" min="0" max="60" value="25" data-field="dettes_court_terme" />
-            </div>
-
-            <div class="stress-param">
-              <div class="sp-row">
-                <span class="sp-label">🏛 Collateral Value</span>
-                <span class="sp-pct" id="spCollPct">±15%</span>
-              </div>
-              <input type="range" class="stress-slider" id="sliderColl" min="0" max="50" value="15" data-field="valeur_garanties" />
-            </div>
-
-            <div class="stress-param">
-              <div class="sp-row">
-                <span class="sp-label">⏰ Payment Delays</span>
-                <span class="sp-pct" id="spDelayPct">±30%</span>
-              </div>
-              <input type="range" class="stress-slider" id="sliderDelay" min="0" max="80" value="30" data-field="retards_paiement_jours_moyen" />
-            </div>
-
-            <div class="stress-param">
-              <div class="sp-row">
-                <span class="sp-label">🌍 GDP Growth</span>
-                <span class="sp-pct" id="spGdpPct">±40%</span>
-              </div>
-              <input type="range" class="stress-slider" id="sliderGdp" min="0" max="80" value="40" data-field="croissance_pib" />
-            </div>
+            <div id="stressParamsContainer"></div>
 
             <div class="mc-divider"></div>
             <button class="btn-primary full-width" id="btnRunMC">
-              <span class="btn-icon">🎲</span> Run Simulation
+              <span class="btn-icon">🎲</span> Lancer la Simulation
             </button>
             <div class="mc-progress hidden" id="mcProgress">
               <div class="mc-progress-track"><div class="mc-progress-bar" id="mcProgressBar"></div></div>
@@ -677,7 +689,7 @@
         <div class="mc-results-col">
           <div class="result-placeholder" id="mcPlaceholder">
             <div class="placeholder-icon">🎲</div>
-            <div class="placeholder-text">Run a prediction first, then configure & launch the simulation</div>
+            <div class="placeholder-text">Lancez d'abord une prédiction, puis configurez et lancez la simulation</div>
           </div>
 
           <div class="hidden" id="mcResults">
@@ -685,52 +697,52 @@
 
             <div class="mc-stats-row">
               <div class="mc-stat-card">
-                <div class="mc-stat-label">P10 · Best case</div>
+                <div class="mc-stat-label">P10 · Meilleur cas</div>
                 <div class="mc-stat-value success" id="mcP10">—</div>
               </div>
               <div class="mc-stat-card">
-                <div class="mc-stat-label">P50 · Median</div>
+                <div class="mc-stat-label">P50 · Médiane</div>
                 <div class="mc-stat-value" id="mcP50">—</div>
               </div>
               <div class="mc-stat-card">
-                <div class="mc-stat-label">P90 · Worst case</div>
+                <div class="mc-stat-label">P90 · Pire cas</div>
                 <div class="mc-stat-value danger" id="mcP90">—</div>
               </div>
               <div class="mc-stat-card">
-                <div class="mc-stat-label">Mean PD</div>
+                <div class="mc-stat-label">PD Moyenne</div>
                 <div class="mc-stat-value" id="mcMean">—</div>
               </div>
               <div class="mc-stat-card">
-                <div class="mc-stat-label">Volatility (σ)</div>
+                <div class="mc-stat-label">Volatilité (σ)</div>
                 <div class="mc-stat-value" id="mcStd">—</div>
               </div>
               <div class="mc-stat-card">
-                <div class="mc-stat-label">VaR 95 · tail risk</div>
+                <div class="mc-stat-label">VaR 95 · risque extrême</div>
                 <div class="mc-stat-value danger" id="mcVar95">—</div>
               </div>
               <div class="mc-stat-card">
-                <div class="mc-stat-label">ES 95 · worst-5% avg</div>
+                <div class="mc-stat-label">ES 95 · moy. pire 5%</div>
                 <div class="mc-stat-value danger" id="mcEs95">—</div>
               </div>
             </div>
 
             <div class="mc-charts-row">
               <div class="mc-chart-card">
-                <h4>PD Distribution across scenarios</h4>
-                <p class="mc-chart-hint">How often each default-probability band occurred. Green = safe, red = high risk.</p>
+                <h4>Distribution de la PD sur les scénarios</h4>
+                <p class="mc-chart-hint">Fréquence de chaque tranche de probabilité de défaut. Vert = sûr, rouge = risque élevé.</p>
                 <div class="chart-container-sm"><canvas id="chartMCHist"></canvas></div>
               </div>
               <div class="mc-chart-card">
-                <h4>Risk Class Breakdown</h4>
-                <p class="mc-chart-hint">Share of scenarios in each risk tier.</p>
+                <h4>Répartition par Classe de Risque</h4>
+                <p class="mc-chart-hint">Part des scénarios dans chaque palier de risque.</p>
                 <div class="chart-container-sm"><canvas id="chartMCRisk"></canvas></div>
               </div>
             </div>
 
             <div class="mc-scenario-table-wrap">
-              <h4>Scenario Extremes</h4>
+              <h4>Scénarios Extrêmes</h4>
               <table class="shap-table" id="mcExtremeTable">
-                <thead><tr><th>#</th><th>Scenario inputs</th><th>PD</th><th>Risk Class</th></tr></thead>
+                <thead><tr><th>#</th><th>Variables du scénario</th><th>PD</th><th>Classe de Risque</th></tr></thead>
                 <tbody></tbody>
               </table>
             </div>
@@ -739,32 +751,8 @@
       </div>
     </section>
 
-    <!-- ── IFRS 9 ─────────────────────────────────────────────────────────── -->
-    <section class="page" id="page-ifrs9">
-      <div class="page-header">
-        <h1>IFRS 9 — ECL Engine</h1>
-        <p>Expected Credit Loss reporting module</p>
-      </div>
-      <div class="coming-soon">
-        <div class="cs-icon">📋</div>
-        <div class="cs-title">Coming Soon</div>
-        <div class="cs-desc">
-          The IFRS 9 ECL pipeline will run scenario-weighted Expected Credit Loss<br />
-          calculations and visualise results across PD / LGD / EAD curves.
-        </div>
-        <div class="cs-modules">
-          <div class="cs-module">PD Curve</div>
-          <div class="cs-module">LGD Curve</div>
-          <div class="cs-module">EAD Curve</div>
-          <div class="cs-module">Discount Factors</div>
-          <div class="cs-module">Macro Scenarios</div>
-          <div class="cs-module">ECL Synthesis</div>
-        </div>
-      </div>
-    </section>
-
   </main>
 
-  <script src="/dashboard/static/app.js"></script>
+  <script src="/dashboard/static/app.js?v=6"></script>
 </body>
 </html>

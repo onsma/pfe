@@ -1,0 +1,551 @@
+RandomForest exposes model.feature_importances_ — a Gini/MDI importance: for every split in every tree, how much that split reduced impurity, summed and normalized across the whole forest. I:
+
+1. Loaded the live artifact (preprocessor + model) exactly as the API does.
+2. Pulled preprocessor.get_feature_names_out() (the transformed columns — one-hot dummies like nom__risk_class_Rejete, scaled numerics like winsor_num__tresorerie_disponible) paired with model.feature_importances_.
+3. Aggregated one-hot dummies and derived-ratio columns back to their raw form-field names, and ranked within each category.
+
+That's the ranking I used to redden the labels.
+
+Why that's a different thing from SHAP
+--------------------------------------
+
+                | Global importance (what I used)                          | SHAP (what the app computes)
+Scope           | One number per feature, averaged over the entire         | One value per feature, per individual client
+                | training set                                             |
+Sign            | Unsigned — magnitude only, no direction                  | Signed — tells you if this value pushed PD up or down
+When computed   | Baked into the trained model, static until retrain       | Computed live at inference in shap_service.py, via shap.TreeExplainer
+Question it     | "Which fields does the model lean on in general?"        | "For this client, what drove this prediction?"
+answers         |                                                           |
+
+So the red labels answer "which fields matter most across the model, in general" (a fixed, structural property of the trained forest) — that's the right question for deciding which fields deserve attention on a generic input form. The SHAP panel added separately (left of SHAP/LLM pages) answers "for the client currently loaded, what's driving their specific number" — a different, per-case question, recomputed every time you run Explain.
+
+They usually agree directionally (payment_stress_index, tresorerie_disponible, chiffre_affaires_annuel are near the top by both measures) but won't always match exactly for any single client, since SHAP can surface a feature as locally decisive even if its global importance is modest.
+
+
+====================================================================
+Utility of Monte Carlo simulation in this platform
+====================================================================
+
+The Risk Prediction tab gives a single point estimate of default probability,
+computed from the client's figures exactly as declared today. That number
+hides a question every credit committee eventually asks: how much would this
+PD move if the client's situation drifted — revenue softening, payment delays
+creeping up, the macro backdrop turning? Monte Carlo answers it directly.
+
+What it does, mechanically (monte_carlo_service.py)
+----------------------------------------------------
+1. Take the baseline client and a set of "shocks" — which raw fields to
+   randomize and by how much (e.g. vary chiffre_affaires_annuel by +/-20%).
+2. Draw n_simulations (e.g. 1,000-5,000) random multipliers per shocked
+   field, normal- or uniform-distributed, and apply them to the baseline
+   values. Financial magnitudes are clipped at 0 so they can't go negative.
+3. Re-derive the engineered ratio features (loan_to_revenue, cash_to_debt,
+   payment_stress_index, ...) from the shocked values, not reused from the
+   baseline, so ratios stay internally consistent with each draw.
+4. Run every simulated row through the SAME deployed pipeline
+   (preprocessor.transform + model.predict_proba) in one vectorized batch.
+
+The result is not one PD but a full empirical distribution of plausible PDs
+for that specific client.
+
+Why a single point estimate isn't enough
+------------------------------------------
+Two clients can share the same baseline PD yet carry very different risk:
+one stays tightly clustered around its estimate under stress, the other
+swings wildly. A point estimate can't tell them apart — only the spread of
+the simulated distribution can.
+
+What the analyst gets back (MonteCarloResponse)
+--------------------------------------------------
+- mean_pd / std_pd        — center and spread of the simulated distribution.
+- percentiles (p5..p95)   — e.g. "5% of scenarios have PD below X".
+- var_95                  — Value-at-Risk: the PD level breached in only the
+                             worst 5% of simulated scenarios.
+- expected_shortfall_95   — the AVERAGE PD within that worst 5% tail (more
+                             informative than VaR alone, since VaR says
+                             nothing about how bad the tail actually gets).
+- prob_exceeds_threshold  — the share of simulations that would flip the
+                             client to "default" under the decision
+                             threshold — i.e. how close the client sits to a
+                             downgrade even if its baseline PD looks safe.
+- risk_distribution       — how many simulated scenarios land in
+                             low/medium/high risk buckets.
+- histogram + extremes    — full shape of the distribution, plus the exact
+                             feature values behind the best- and worst-case
+                             simulated scenarios.
+
+Why this matters for credit analysis
+----------------------------------------
+- Dispersion, not just level: identifies fragile clients whose PD would
+  swing a lot under realistic volatility, even if their current PD looks
+  comfortable.
+- Tail risk (VaR / Expected Shortfall): what provisioning and capital-
+  adequacy discussions actually need — the worst-case severity, not the
+  central estimate.
+- Probability of a risk-class flip: quantifies how close a client sits to a
+  downgrade, which a single PD number cannot show.
+- Defensible stress testing: instead of one or two hand-picked
+  "optimistic/pessimistic" scenarios, it explores the full space of
+  plausible shocks at once — a more rigorous, auditable basis for
+  stress-test documentation.
+
+Practical tip: set wider stress bands on the fields already flagged as
+high-impact (the red-labeled fields on Risk Prediction / the top SHAP
+drivers) — shocking a low-importance field barely moves the distribution and
+wastes simulation budget.
+
+
+====================================================================
+Monte Carlo — detailed mathematical explanation
+====================================================================
+
+Setup
+-----
+Let x in R^d be the baseline client's raw feature vector, and let
+
+    f : R^d -> [0,1],      f(x) = P(default | x)
+
+be the deployed pipeline (feature engineering -> preprocessor -> model). f is
+deterministic — all randomness in the simulation comes from how the input is
+perturbed, not from the model itself.
+
+Step 1 — building a random input (code: monte_carlo_service.py:43-55)
+------------------------------------------------------------------------
+Pick the shocked coordinates S (the "shocks" list). For each shocked field
+j in S with baseline value b_j = x_j and shock size p_j ("shock.pct"), draw a
+multiplicative factor Phi_j:
+
+    Normal:    Phi_j ~ N(1, p_j^2)
+    Uniform:   Phi_j ~ U(1 - p_j, 1 + p_j)
+
+The shocked feature value is:
+
+    X~_j = max(0, b_j * Phi_j)     if b_j >= 0   (financial magnitudes can't
+                                                    go negative)
+    X~_j = b_j * Phi_j              otherwise      (e.g. rates, which may)
+
+Unshocked coordinates are held fixed: X~_j = x_j for j not in S. Together
+this defines a random vector X~ in R^d — the distribution of a "wobbled"
+version of the client.
+
+Step 2 — Monte Carlo sampling
+------------------------------
+Draw n i.i.d. realizations X~^(1), ..., X~^(n) ("n_simulations", typically
+1,000-5,000). For each, re-derive the engineered ratios (loan_to_revenue,
+cash_to_debt, payment_stress_index, ...) so they stay consistent with the
+shocked draw, then evaluate:
+
+    Y_i = f(X~^(i)),    i = 1, ..., n
+
+This is a Monte Carlo estimate of the pushforward distribution of f under
+the perturbation — the law of Y = f(X~). There is no closed form for it
+(tree ensemble + encoders + engineered ratios), so simulation is the only
+practical way to characterize it. By the Law of Large Numbers, the empirical
+distribution of {Y_i} converges to the true distribution of Y as n -> infinity.
+By the Central Limit Theorem, the estimation error of any summary statistic
+(e.g. the mean) shrinks as O(sigma / sqrt(n)) — independent of the input
+dimension d, which is why a few thousand draws is enough even though the
+client has dozens of features.
+
+Step 3 — summary statistics (all computed from {Y_1, ..., Y_n})
+--------------------------------------------------------------------
+Mean and standard deviation:
+
+    mu_hat    = (1/n) * sum_i Y_i                       -> mean_pd
+    sigma_hat = sqrt( (1/n) * sum_i (Y_i - mu_hat)^2 )   -> std_pd
+
+Percentiles — the q-th percentile is the order statistic at rank
+ceil(q*n/100) of the sorted sample:
+
+    p_q = Y_(ceil(q*n/100))   for q in {5, 10, 25, 50, 75, 90, 95}
+                                                          -> percentiles dict
+
+Value-at-Risk (95%) — the loss level exceeded by only 5% of scenarios, i.e.
+the 95th percentile of the simulated PD distribution:
+
+    VaR_alpha(Y) = inf { y : P(Y <= y) >= alpha },   alpha = 0.95
+                                                          -> var_95
+
+Expected Shortfall (95%) — the average PD WITHIN that worst 5% tail:
+
+    ES_alpha(Y) = E[ Y | Y >= VaR_alpha(Y) ]
+                ~= (1/|T|) * sum_{i in T} Y_i,   T = { i : Y_i >= VaR_alpha }
+                                                          -> expected_shortfall_95
+
+ES is a more informative tail measure than VaR alone: VaR only tells you the
+threshold breached in the worst 5% of cases, not how bad those cases
+actually get on average. ES is also, unlike VaR, a "coherent" risk measure
+(subadditive) — it never understates the risk of a diversified portfolio.
+
+Probability of breaching the decision threshold tau:
+
+    P_hat(Y >= tau) = (1/n) * sum_i 1[Y_i >= tau]        -> prob_exceeds_threshold
+
+— the empirical CDF complement evaluated at the decision threshold, i.e. the
+fraction of simulated scenarios that would flip the client to "default".
+
+Risk-class distribution: apply the same fixed cutoffs used elsewhere in the
+app to every Y_i,
+
+    risk_class(Y_i) = high    if Y_i >= 0.7
+                       medium  if 0.4 <= Y_i < 0.7
+                       low     if Y_i <  0.4
+
+and count occurrences of each label -> risk_distribution.
+
+Histogram: partition [0,1] into n_bins equal-width bins B_k and count how
+many Y_i fall in each -> histogram (edges + counts).
+
+Extremes: the k smallest and k largest Y_i (order statistics
+Y_(1)..Y_(k) and Y_(n-k+1)..Y_(n)), reported together with the exact
+shocked feature values X~^(i) that produced them -> extremes.
+
+Why this is the right tool here
+-----------------------------------
+The model f has no closed form (RandomForest/XGBoost + encoders), so there is
+no analytical way to propagate uncertainty in the input features through to
+uncertainty in the predicted PD. Monte Carlo sidesteps that entirely: it
+treats f as a black box and just evaluates it many times, which is exactly
+why it is standard in quantitative finance for pricing and risk under
+model uncertainty (Glasserman, "Monte Carlo Methods in Financial
+Engineering", 2004) and why it is used here as the platform's stress-testing
+engine.
+
+
+====================================================================
+How the most important features are known BEFORE running SHAP
+====================================================================
+
+This is possible because "most important feature" here means something
+different from what SHAP measures — it is a property baked into the trained
+model itself, not something computed per client at inference time.
+
+Where it comes from
+--------------------
+A RandomForestClassifier is a collection of decision trees. Every internal
+node in every tree is a single-feature split (e.g. "is tresorerie_disponible
+<= 42,000?") chosen, during training, because it reduced impurity the most
+among all candidate splits at that node. Impurity here is the Gini index — a
+measure of how mixed the default/non-default labels are among the samples
+that reach that node (0 = perfectly pure, max at a 50/50 mix).
+
+For a given feature, its "importance" (Mean Decrease in Impurity, MDI) is:
+
+    importance(feature j) = sum over all nodes that split on j of
+                             ( samples_at_node / total_samples ) * impurity_decrease_at_node,
+                             averaged over all trees in the forest, then
+                             normalized so all feature importances sum to 1.
+
+This is exactly the array returned by scikit-learn's
+model.feature_importances_ — it already exists the moment the forest
+finishes training. Loading it is just:
+
+    artifact = load_artifact()          # loads the .joblib (preprocessor + model)
+    importances = artifact["model"].feature_importances_
+
+No inference on any specific client is required — this is why the ranking
+was available before a single SHAP computation was run, and why the exact
+same ranking is used to redden labels on the Risk Prediction form regardless
+of which client is loaded.
+
+Why this differs fundamentally from SHAP
+------------------------------------------
+MDI answers "across the ~10,000 rows the forest was trained on, which
+features did it lean on most to separate defaulters from non-defaulters?" —
+a single, static, global answer. SHAP (explained below) answers "for THIS
+one client's numbers, which features pushed the prediction up or down, and by
+how much?" — a different value for every client, computed on demand. The two
+can (and often do) disagree for an individual case: a globally minor field
+can be locally decisive if that particular client has an extreme value on it.
+
+
+====================================================================
+What SHAP actually does
+====================================================================
+
+SHAP stands for SHapley Additive exPlanations (Lundberg & Lee, 2017). It
+answers one specific question for one specific prediction: "how much did
+each input feature contribute to moving the model's output away from its
+average/baseline prediction, for this exact row of data?"
+
+Where the idea comes from (game theory)
+------------------------------------------
+The concept is borrowed from cooperative game theory — the Shapley value
+(Shapley, 1953), originally designed to fairly split a payout among players
+in a coalition based on their individual contribution. SHAP treats a
+prediction the same way: the "players" are the feature values of one client,
+and the "payout" to be fairly split is the gap between the model's average
+prediction over the whole training set (the base_value) and its actual
+prediction for this client.
+
+Concretely, for a feature j, its Shapley value averages the marginal effect
+of "adding" that feature's actual value across every possible order in which
+features could be revealed to the model:
+
+    phi_j = sum over all subsets S of features not containing j of
+            [ |S|! * (d - |S| - 1)! / d! ] *
+            [ f(S union {j}) - f(S) ]
+
+where f(S) is the model's expected output when only the features in S are
+known (the rest are marginalized out), and d is the total number of
+features. In plain terms: look at every possible group of "other features
+already known," measure how much adding feature j to that group moves the
+prediction, and average that effect fairly over all possible groups and
+orderings. This is the only attribution method that satisfies a set of
+fairness axioms simultaneously (efficiency, symmetry, dummy, additivity) —
+which is why it is preferred over simpler ad hoc attribution heuristics.
+
+The key guarantee — additivity
+----------------------------------
+    base_value + sum_j(phi_j) = f(x)    for this specific client x
+
+i.e. the SHAP values for one client always add up exactly to the gap between
+the average prediction and this client's actual predicted PD. That is what
+lets the SHAP page show "Base Value" and "Final PD" side by side with a
+waterfall of per-feature contributions that reconciles the two exactly.
+
+Why TreeExplainer specifically (shap_service.py)
+----------------------------------------------------
+The brute-force Shapley formula above is combinatorial — computing it exactly
+would require evaluating the model on 2^d feature subsets, intractable for
+~50 features. For tree-based models (RandomForest, XGBoost) there is an
+efficient EXACT algorithm, Tree SHAP (Lundberg et al., 2018), which exploits
+the tree structure to compute exact Shapley values in polynomial time by
+tracking feature contributions as they flow down each tree's decision paths.
+That is exactly what:
+
+    explainer = shap.TreeExplainer(artifact["model"])
+    shap_values = explainer.shap_values(transformed_client_row)
+
+does — no approximation, no sampling, the mathematically exact Shapley
+values for this model and this client.
+
+What the app does with the output
+--------------------------------------
+1. shap_row = the array of phi_j values for every transformed column, for
+   this one client.
+2. top_idx = np.argsort(np.abs(shap_row))[::-1][:top_k] — take the top_k
+   features by absolute contribution (magnitude, ignoring sign) so both
+   strong risk-increasing and strong risk-decreasing features surface.
+3. Each is tagged direction="increase_risk" if phi_j >= 0, else
+   "decrease_risk" — this is what renders as the red/green bars and the
+   Increases/Decreases risk labels on the SHAP page.
+4. The same top_k list feeds the "highest-impact variables" panel on the
+   SHAP and LLM pages, recomputed every time a new client (or what-if
+   scenario) is explained.
+
+
+====================================================================
+What TEG, taux directeur, and PIB mean
+====================================================================
+
+TEG — Taux Effectif Global (field: taux_interet_teg)
+--------------------------------------------------------
+The "all-in" annual cost of the loan to the borrower, expressed as a single
+percentage rate. It is not just the nominal/quoted interest rate — it also
+folds in mandatory ancillary costs of getting the credit: application and
+processing fees, mandatory insurance, guarantee/collateral registration
+costs, etc. (per the dataset dictionary: "total effective rate proxy").
+Two loans can have the same advertised interest rate but very different
+TEGs if one carries heavier fees — TEG is what makes them comparable.
+A higher TEG raises the client's real debt-servicing burden, which is why
+it is one of the most influential fields in the Loan Details category of
+the model (it interacts with cash flow and repayment capacity).
+
+Taux directeur — policy / central bank rate (field: taux_directeur)
+------------------------------------------------------------------------
+The benchmark interest rate set by the central bank (in Tunisia's context,
+the BCT's key policy rate) — the rate at which it lends to commercial banks.
+It is a macro-economic input in this dataset, not something specific to one
+client: it moves for the whole portfolio at once. It matters for credit risk
+because commercial lending rates (including variable-rate loans, and
+re-pricing at renewal for many SME loans) are anchored to it — a higher
+policy rate raises borrowing costs economy-wide, tightens credit conditions,
+and historically correlates with higher SME default rates, especially for
+already-leveraged or thin-margin businesses. In this platform it is one of
+the macro scenario fields (alongside taux_inflation, croissance_pib,
+taux_chomage) used both as a direct model feature and to define the
+economic backdrop of a client's file.
+
+PIB — Produit Intérieur Brut / GDP growth (field: croissance_pib)
+------------------------------------------------------------------------
+Gross Domestic Product growth — the year-over-year percentage change in the
+total value of goods and services produced in the economy. It is the
+headline measure of whether the economy is expanding or contracting.
+For SME credit risk specifically, GDP growth is a leading indicator of
+aggregate demand: when croissance_pib is low or negative (a slowdown or
+recession), SMEs typically see revenue pressure, slower receivables, and
+higher default rates across the portfolio, independent of any single
+company's own fundamentals — this is exactly the kind of systemic risk that
+the "Economic Scenario" (scenario_economique: normal / degrade / severe)
+field and the Monte Carlo macro-shock parameters are meant to capture.
+
+
+====================================================================
+Choosing WHICH fields to stress in Monte Carlo: SHAP magnitude is a
+proxy for sensitivity, not sensitivity itself
+====================================================================
+
+The Monte Carlo stress sliders are now populated dynamically from the top
+SHAP-ranked fields of the currently loaded client (see app.js,
+updateStressParamsFromShap), instead of a fixed list unrelated to the
+client. This is a good practical default, but it is worth being precise
+about what it actually optimizes for, because SHAP magnitude and stress
+sensitivity are two different quantities that usually — but not always —
+agree.
+
+The distinction
+------------------
+SHAP answers an ATTRIBUTION question: "given this client's ACTUAL values
+right now, how much did each feature contribute to moving the prediction
+away from the average client?" It is a decomposition of the CURRENT
+prediction, computed once, at the client's current point in feature space.
+
+Monte Carlo needs a SENSITIVITY (local elasticity) question instead: "if
+this feature's value moved by a plausible amount, how much would the
+prediction change?" That is a question about the LOCAL SLOPE of the model
+around the client's current point, not about the current attribution.
+
+For a tree ensemble, these can diverge in either direction:
+- A feature can have a LARGE SHAP value right now, yet sit in a region of
+  the trees where nearby splits are far away — perturbing it further barely
+  moves the prediction (its current contribution is large, but it is not
+  "on a cliff edge").
+- A feature can have a SMALL (near-zero) SHAP value right now — precisely
+  because its current value sits close to a decision threshold, so it
+  currently contributes almost nothing — yet a small stress could push it
+  across that threshold and swing the prediction sharply. SHAP would not
+  flag this feature as important for this client, even though it is exactly
+  the kind of fragile point Monte Carlo exists to find.
+
+Why the SHAP-based selection is used anyway
+------------------------------------------------
+1. It is free: the ranking is already computed by the time an analyst has
+   run a SHAP explanation, so no extra backend round-trip is needed to
+   populate the stress sliders.
+2. In practice, for tree-based models, high current attribution and high
+   local sensitivity correlate strongly: features that explain most of a
+   client's deviation from baseline tend to be the ones sitting closest to
+   the thresholds that matter for that type of client, so they are usually
+   also where a stress shock has the biggest effect.
+3. It keeps the tool's narrative coherent for a credit analyst: "we are
+   stress-testing the variables you were just shown drive this client's
+   risk" is intuitive and auditable, versus a separate, harder-to-explain
+   sensitivity ranking.
+
+The theoretically more rigorous alternative (not implemented)
+--------------------------------------------------------------------
+A direct local-sensitivity scan would answer the Monte Carlo question
+exactly instead of by proxy: for each candidate raw field, perturb it by a
+small fixed step (e.g. +/-1%) around the client's actual value, re-run the
+model once per field, and rank fields by the resulting |delta PD|
+(a finite-difference estimate of the local partial derivative
+d(PD)/d(feature)). The top-K fields by this measured sensitivity would then
+seed the Monte Carlo sliders, rather than the top-K by SHAP magnitude. This
+costs one extra model evaluation per candidate field (~26 raw shockable
+fields here — cheap for a RandomForest, since scikit-learn evaluates a full
+forest on a batch of 26 rows in milliseconds) but requires an additional
+backend round-trip before the stress panel can populate, which is why it
+was scoped as an optional future refinement rather than built by default.
+
+
+====================================================================
+Worked example: reading an actual Monte Carlo result
+====================================================================
+
+A real simulation on the platform returned:
+
+    P10 (best case)     48.3%
+    P50 (median)         49.0%
+    P90 (worst case)     50.2%
+    Mean PD               49.1%
+    Volatility (sigma)    0.7%
+    VaR 95 (tail risk)   50.4%
+    ES 95 (avg worst 5%) 50.7%
+
+Why each of these is computed (recap, applied to these numbers)
+----------------------------------------------------------------------
+- P10/P50/P90 bound the "typical" range: in 80% of the 2,000-5,000 simulated
+  stress draws, this client's PD landed between 48.3% and 50.2%. The median
+  (49.0%) is almost identical to the mean (49.1%), which itself is very
+  close to the baseline PD — a first sign the distribution is not skewed by
+  a few extreme scenarios.
+- Volatility (sigma = 0.7 percentage points) is the standard deviation of
+  simulated PD around the mean. This is the single most informative number
+  here: it says that even under the configured stress bands (e.g. +/-20-30%
+  swings on revenue, cash, payment delays...), this client's predicted PD
+  barely moves. Compare this to a fragile client, where the same stress
+  bands might produce a sigma of 8-10 points instead.
+- VaR 95 (50.4%) is only ~1.3 points above the mean — the worst 5% of
+  simulated scenarios are not much worse than the typical case.
+- ES 95 (50.7%) — the average PD within that worst 5% tail — is barely
+  above VaR 95 itself, meaning even the tail of the tail is not much worse
+  than its own threshold. There is no "long tail" of catastrophic scenarios
+  hiding beyond the 95th percentile.
+
+What this particular result tells an analyst
+----------------------------------------------------
+A narrow spread like this (48.3%-50.7%, sigma under 1 point) means the
+client's risk assessment is ROBUST to the stresses configured: whatever
+happens to revenue, cash, or payment behaviour within the tested bands, the
+PD stays anchored close to ~49%. That is a materially different, and more
+useful, statement than "the PD is 49%" alone — it tells the analyst this
+number can be trusted not to swing wildly under realistic adverse
+conditions, which a single point estimate can never confirm by itself. (It
+is also consistent with an earlier finding in this file: this particular
+client profile sits in a region where the model's prediction is only weakly
+sensitive to any single input, which is exactly why both its SHAP
+attributions and its Monte Carlo volatility are small — see the "always
+49%" investigation notes for the underlying cause.)
+
+
+====================================================================
+The decision threshold ("Seuil") on the Risk Prediction page: what it
+is, and who sets it
+====================================================================
+
+What it is
+------------
+The model itself only ever outputs a continuous probability of default
+(PD) between 0 and 1 — it never outputs "risky" or "not risky" on its own.
+The threshold (tau) is the cutoff applied on top of that probability to
+turn it into a binary decision:
+
+    prediction = 1 (in default / high risk)   if PD >= tau
+    prediction = 0 (not in default / safe)    if PD <  tau
+
+This is exactly what backend/app/services/model_service.py does:
+`pred = int(proba_default >= threshold)`. Changing tau does not change the
+model's PD estimate at all — it only changes where the line is drawn on
+that estimate.
+
+Who chooses it, and why it is NOT a modeling decision
+------------------------------------------------------------
+The threshold is a business / risk-policy parameter, not something learned
+by or derived from the model. It encodes the bank's risk appetite — how it
+wants to trade off two kinds of mistakes:
+
+- A LOW threshold flags more clients as risky: fewer real defaulters slip
+  through undetected (fewer false negatives), but more genuinely safe
+  clients get incorrectly flagged too (more false positives) — costing
+  business by rejecting/over-scrutinising good clients.
+- A HIGH threshold flags fewer clients as risky: fewer good clients get
+  wrongly flagged (fewer false positives), but more actual defaulters slip
+  through as "safe" (more false negatives) — costing money through missed
+  defaults.
+
+There is no universally "correct" threshold — the right value depends on
+the bank's cost structure (cost of a missed default vs. cost of rejecting a
+good client), regulatory capital requirements, and risk tolerance. That
+decision belongs to the bank's credit risk policy / risk management
+function, not to the data science team or the model.
+
+Where it is actually set in this platform
+------------------------------------------------
+- Default value: the DEFAULT_THRESHOLD setting in backend/.env
+  (backend/app/config.py), applied to every prediction unless overridden.
+- Per-request override: POST /predict?threshold=0.4 lets an analyst test
+  a different cutoff for a single call without changing the global default
+  — useful for "what would the decision be under a stricter policy"
+  exploration, without that exploration silently becoming the bank-wide
+  policy.

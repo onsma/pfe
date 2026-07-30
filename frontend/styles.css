@@ -93,7 +93,7 @@ body {
 }
 .brand-logo:hover { transform: rotate(-6deg) scale(1.05); }
 .brand-text { display: flex; flex-direction: column; line-height: 1.1; }
-.brand-name { font-weight: 800; font-size: 18px; color: var(--text); letter-spacing: -.4px; }
+.brand-name { font-weight: 800; font-size: 15px; color: var(--text); letter-spacing: -.3px; white-space: nowrap; }
 .brand-sub  { font-size: 10.5px; color: var(--text-muted); font-weight: 500; letter-spacing: .3px; text-transform: uppercase; }
 
 .pill-ico { font-size: 12px; opacity: .85; margin-right: 1px; }
@@ -336,6 +336,23 @@ body {
 /* ══════════════════════════════════════════════════════════════════════════
    PREDICTION PAGE
 ══════════════════════════════════════════════════════════════════════════ */
+.influential-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--danger-bg);
+  border: 1px solid #FECACA;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+.influential-legend .label-influential {
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
 .pred-layout {
   display: grid;
   grid-template-columns: 1fr 360px;
@@ -382,6 +399,18 @@ label, .small-label {
   font-size: 12px;
   font-weight: 500;
   color: var(--text-muted);
+}
+label.label-influential {
+  color: var(--danger);
+  font-weight: 700;
+}
+label.label-influential::after {
+  content: "●";
+  font-size: 7px;
+  vertical-align: middle;
+  margin-left: 5px;
+  position: relative;
+  top: -1px;
 }
 input[type=number], input[type=text], select, textarea {
   border: 1.5px solid var(--border-soft);
@@ -542,6 +571,53 @@ select { cursor: pointer; }
 }
 .rstat { text-align: center; }
 .rstat-label { font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 3px; }
+.info-tip {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+.info-tip-icon {
+  display: inline-block;
+  cursor: pointer;
+  color: var(--danger);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+}
+.info-tip-icon:hover, .info-tip-icon:focus { color: var(--primary-h); outline: none; }
+.info-tip-bubble {
+  display: none;
+  position: absolute;
+  z-index: 200;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  max-width: 80vw;
+  background: var(--text);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+}
+.info-tip-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--text);
+}
+.info-tip.open .info-tip-bubble { display: block; }
 .rstat-value { font-size: 15px; font-weight: 700; color: var(--text); }
 .rstat-value.danger  { color: var(--danger); }
 .rstat-value.success { color: var(--success); }
@@ -593,6 +669,74 @@ select { cursor: pointer; }
   min-width: 20px;
   text-align: center;
 }
+
+/* ── HIGHEST-IMPACT VARIABLES PANEL (SHAP page + LLM sidebar) ────────────── */
+.influential-panel {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border-soft);
+}
+.influential-panel-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.influential-panel-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.influential-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.influential-empty {
+  font-size: 11.5px;
+  color: var(--text-light);
+  font-style: italic;
+}
+.infl-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.infl-rank {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-light);
+  width: 14px;
+  flex-shrink: 0;
+}
+.infl-name {
+  flex: 1;
+  color: var(--text-2);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.infl-dir { font-size: 12px; flex-shrink: 0; }
+.infl-dir.up   { color: var(--danger); }
+.infl-dir.down { color: var(--success); }
+.infl-bar-wrap {
+  width: 46px;
+  height: 5px;
+  background: var(--border-soft);
+  border-radius: 99px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.infl-bar { height: 100%; border-radius: 99px; }
+.infl-bar.up   { background: var(--danger); }
+.infl-bar.down { background: var(--success); }
 
 .shap-chart-area {
   background: var(--card);
@@ -874,6 +1018,31 @@ select { cursor: pointer; }
 /* ══════════════════════════════════════════════════════════════════════════
    MONTE CARLO PAGE
 ══════════════════════════════════════════════════════════════════════════ */
+.mc-explainer {
+  background: var(--card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 22px 26px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.mc-explainer-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.mc-explainer-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.mc-explainer p {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.7;
+  margin: 0 auto;
+  max-width: 780px;
+}
+.mc-explainer strong { color: var(--text); }
+
 .mc-layout {
   display: grid;
   grid-template-columns: 300px 1fr;
@@ -1016,31 +1185,6 @@ select { cursor: pointer; }
 }
 .mc-chart-card h4 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
 .mc-scenario-table-wrap h4 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
-
-/* ══════════════════════════════════════════════════════════════════════════
-   IFRS 9 — COMING SOON
-══════════════════════════════════════════════════════════════════════════ */
-.coming-soon {
-  text-align: center;
-  padding: 80px 24px;
-  background: var(--card);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-}
-.cs-icon { font-size: 56px; margin-bottom: 16px; opacity: .6; }
-.cs-title { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
-.cs-desc  { font-size: 14px; color: var(--text-muted); line-height: 1.8; margin-bottom: 28px; }
-.cs-modules { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-.cs-module {
-  background: var(--primary-pal);
-  border: 1.5px solid var(--bg2);
-  color: var(--primary);
-  border-radius: var(--radius-pill);
-  padding: 7px 18px;
-  font-size: 12px;
-  font-weight: 600;
-}
 
 /* ══════════════════════════════════════════════════════════════════════════
    UTILITIES

@@ -1,0 +1,601 @@
+RandomForest expose model.feature_importances_ — une importance Gini/MDI : pour chaque split de chaque arbre, la réduction d'impureté qu'il a produite, additionnée et normalisée sur l'ensemble de la forêt. J'ai :
+
+1. Chargé l'artefact live (preprocessor + model) exactement comme le fait l'API.
+2. Récupéré preprocessor.get_feature_names_out() (les colonnes transformées — des dummies one-hot comme nom__risk_class_Rejete, des numériques mises à l'échelle comme winsor_num__tresorerie_disponible) associées à model.feature_importances_.
+3. Agrégé les dummies one-hot et les colonnes de ratios dérivés vers leurs noms de champs bruts d'origine, puis classé au sein de chaque catégorie.
+
+C'est ce classement que j'ai utilisé pour colorer les labels en rouge.
+
+Pourquoi c'est différent de SHAP
+---------------------------------
+
+                | Importance globale (ce que j'ai utilisé)                 | SHAP (ce que l'application calcule)
+Portée          | Un chiffre par variable, moyenné sur tout                 | Une valeur par variable, par client individuel
+                | l'ensemble d'entraînement                                 |
+Signe           | Non signé — magnitude seulement, pas de direction         | Signé — indique si cette valeur pousse la PD à la hausse ou à la baisse
+Moment de calcul| Intégré au modèle entraîné, statique jusqu'au réentraînement | Calculé en direct à l'inférence dans shap_service.py, via shap.TreeExplainer
+Question à      | « Sur quelles variables le modèle s'appuie-t-il           | « Pour ce client, qu'est-ce qui a motivé cette prédiction ? »
+laquelle il     | en général ? »                                             |
+répond          |                                                            |
+
+Donc les labels rouges répondent à « quelles variables comptent le plus à travers le modèle, en général » (une propriété fixe et structurelle de la forêt entraînée) — c'est la bonne question pour décider quelles variables méritent de l'attention sur un formulaire de saisie générique. Le panneau SHAP ajouté séparément (à gauche des pages SHAP/LLM) répond à « pour le client actuellement chargé, qu'est-ce qui motive son chiffre spécifique » — une question différente, propre à chaque cas, recalculée à chaque exécution d'Explain.
+
+Elles concordent généralement en direction (payment_stress_index, tresorerie_disponible, chiffre_affaires_annuel arrivent en tête selon les deux mesures) mais ne correspondront pas toujours exactement pour un client donné, car SHAP peut faire ressortir une variable comme localement décisive même si son importance globale est modeste.
+
+
+====================================================================
+Utilité de la simulation Monte Carlo sur cette plateforme
+====================================================================
+
+L'onglet Prédiction de Risque donne une estimation ponctuelle unique de la
+probabilité de défaut, calculée à partir des chiffres du client exactement
+tels que déclarés aujourd'hui. Ce chiffre masque une question que tout comité
+de crédit finit par poser : de combien cette PD bougerait-elle si la
+situation du client se dégradait — chiffre d'affaires en baisse, retards de
+paiement qui s'accumulent, contexte macro qui se retourne ? Monte Carlo y
+répond directement.
+
+Ce que ça fait, mécaniquement (monte_carlo_service.py)
+--------------------------------------------------------
+1. Prendre le client de référence et un ensemble de « chocs » — quels champs
+   bruts randomiser et de combien (par ex. faire varier chiffre_affaires_annuel
+   de +/-20%).
+2. Tirer n_simulations (par ex. 1 000-5 000) multiplicateurs aléatoires par
+   champ choqué, distribués selon une loi normale ou uniforme, et les
+   appliquer aux valeurs de référence. Les grandeurs financières sont
+   plafonnées à 0 pour qu'elles ne puissent pas devenir négatives.
+3. Redériver les ratios de features construits (loan_to_revenue,
+   cash_to_debt, payment_stress_index, ...) à partir des valeurs choquées, et
+   non réutilisés depuis la référence, afin que les ratios restent
+   cohérents en interne avec chaque tirage.
+4. Faire passer chaque ligne simulée dans LE MÊME pipeline déployé
+   (preprocessor.transform + model.predict_proba) en un seul lot vectorisé.
+
+Le résultat n'est pas une seule PD mais une distribution empirique complète
+des PD plausibles pour ce client spécifique.
+
+Pourquoi une estimation ponctuelle unique ne suffit pas
+----------------------------------------------------------
+Deux clients peuvent partager la même PD de référence tout en portant des
+risques très différents : l'un reste étroitement regroupé autour de son
+estimation sous stress, l'autre oscille fortement. Une estimation ponctuelle
+ne peut pas les distinguer — seule la dispersion de la distribution simulée
+le peut.
+
+Ce que l'analyste obtient en retour (MonteCarloResponse)
+------------------------------------------------------------
+- mean_pd / std_pd        — centre et dispersion de la distribution simulée.
+- percentiles (p5..p95)   — par ex. « 5% des scénarios ont une PD inférieure à X ».
+- var_95                  — Value-at-Risk : le niveau de PD dépassé dans
+                             seulement les 5% pires scénarios simulés.
+- expected_shortfall_95   — la PD MOYENNE au sein de cette pire tranche de 5%
+                             (plus informatif que le VaR seul, car le VaR ne
+                             dit rien sur l'ampleur réelle de la queue de
+                             distribution).
+- prob_exceeds_threshold  — la part des simulations qui ferait basculer le
+                             client en « défaut » sous le seuil de décision —
+                             c'est-à-dire à quel point le client est proche
+                             d'une dégradation même si sa PD de référence
+                             paraît sûre.
+- risk_distribution       — combien de scénarios simulés tombent dans les
+                             tranches de risque faible/moyen/élevé.
+- histogram + extremes    — forme complète de la distribution, plus les
+                             valeurs exactes des variables derrière les
+                             scénarios simulés les meilleurs et les pires.
+
+Pourquoi c'est important pour l'analyse de crédit
+------------------------------------------------------
+- Dispersion, pas seulement niveau : identifie les clients fragiles dont la
+  PD oscillerait fortement sous une volatilité réaliste, même si leur PD
+  actuelle paraît confortable.
+- Risque de queue (VaR / Expected Shortfall) : ce dont les discussions de
+  provisionnement et d'adéquation des fonds propres ont réellement besoin —
+  la sévérité du pire cas, pas l'estimation centrale.
+- Probabilité de bascule de classe de risque : quantifie à quel point un
+  client est proche d'une dégradation, ce qu'un seul chiffre de PD ne peut
+  pas montrer.
+- Stress test défendable : au lieu d'un ou deux scénarios
+  « optimiste/pessimiste » choisis à la main, cela explore l'ensemble de
+  l'espace des chocs plausibles en une seule fois — une base plus rigoureuse
+  et auditable pour la documentation de stress test.
+
+Astuce pratique : fixer des bandes de stress plus larges sur les champs déjà
+signalés comme à fort impact (les champs en rouge sur Prédiction de Risque /
+les principaux facteurs SHAP) — choquer un champ à faible importance bouge à
+peine la distribution et gaspille du budget de simulation.
+
+
+====================================================================
+Monte Carlo — explication mathématique détaillée
+====================================================================
+
+Cadre
+-----
+Soit x dans R^d le vecteur de variables brutes du client de référence, et
+soit
+
+    f : R^d -> [0,1],      f(x) = P(défaut | x)
+
+le pipeline déployé (feature engineering -> preprocessor -> model). f est
+déterministe — tout l'aléa de la simulation vient de la manière dont
+l'entrée est perturbée, pas du modèle lui-même.
+
+Étape 1 — construire une entrée aléatoire (code : monte_carlo_service.py:43-55)
+----------------------------------------------------------------------------------
+Choisir les coordonnées choquées S (la liste des « chocs »). Pour chaque
+champ choqué j dans S avec valeur de référence b_j = x_j et taille de choc
+p_j (« shock.pct »), tirer un facteur multiplicatif Phi_j :
+
+    Normale :   Phi_j ~ N(1, p_j^2)
+    Uniforme :  Phi_j ~ U(1 - p_j, 1 + p_j)
+
+La valeur choquée de la variable est :
+
+    X~_j = max(0, b_j * Phi_j)     si b_j >= 0   (les grandeurs financières
+                                                     ne peuvent pas devenir
+                                                     négatives)
+    X~_j = b_j * Phi_j              sinon          (par ex. les taux, qui
+                                                     peuvent l'être)
+
+Les coordonnées non choquées restent fixes : X~_j = x_j pour j pas dans S.
+Ensemble, cela définit un vecteur aléatoire X~ dans R^d — la distribution
+d'une version « perturbée » du client.
+
+Étape 2 — échantillonnage Monte Carlo
+----------------------------------------
+Tirer n réalisations i.i.d. X~^(1), ..., X~^(n) (« n_simulations »,
+typiquement 1 000-5 000). Pour chacune, redériver les ratios construits
+(loan_to_revenue, cash_to_debt, payment_stress_index, ...) afin qu'ils
+restent cohérents avec le tirage choqué, puis évaluer :
+
+    Y_i = f(X~^(i)),    i = 1, ..., n
+
+C'est une estimation Monte Carlo de la distribution image (pushforward) de f
+sous la perturbation — la loi de Y = f(X~). Il n'existe pas de forme close
+pour celle-ci (ensemble d'arbres + encodeurs + ratios construits), donc la
+simulation est le seul moyen pratique de la caractériser. Par la loi des
+grands nombres, la distribution empirique de {Y_i} converge vers la vraie
+distribution de Y quand n -> l'infini. Par le théorème central limite,
+l'erreur d'estimation de toute statistique résumée (par ex. la moyenne)
+décroît en O(sigma / sqrt(n)) — indépendamment de la dimension d de
+l'entrée, ce qui explique pourquoi quelques milliers de tirages suffisent
+même si le client a des dizaines de variables.
+
+Étape 3 — statistiques résumées (toutes calculées à partir de {Y_1, ..., Y_n})
+------------------------------------------------------------------------------------
+Moyenne et écart-type :
+
+    mu_hat    = (1/n) * somme_i Y_i                       -> mean_pd
+    sigma_hat = sqrt( (1/n) * somme_i (Y_i - mu_hat)^2 )   -> std_pd
+
+Percentiles — le q-ième percentile est la statistique d'ordre au rang
+ceil(q*n/100) de l'échantillon trié :
+
+    p_q = Y_(ceil(q*n/100))   pour q dans {5, 10, 25, 50, 75, 90, 95}
+                                                          -> dictionnaire percentiles
+
+Value-at-Risk (95%) — le niveau de perte dépassé par seulement 5% des
+scénarios, c.-à-d. le 95e percentile de la distribution de PD simulée :
+
+    VaR_alpha(Y) = inf { y : P(Y <= y) >= alpha },   alpha = 0.95
+                                                          -> var_95
+
+Expected Shortfall (95%) — la PD moyenne AU SEIN de cette pire tranche de 5% :
+
+    ES_alpha(Y) = E[ Y | Y >= VaR_alpha(Y) ]
+                ~= (1/|T|) * somme_{i dans T} Y_i,   T = { i : Y_i >= VaR_alpha }
+                                                          -> expected_shortfall_95
+
+ES est une mesure de queue plus informative que le VaR seul : le VaR indique
+seulement le seuil dépassé dans les 5% pires cas, pas à quel point ces cas
+sont mauvais en moyenne. ES est aussi, contrairement au VaR, une mesure de
+risque « cohérente » (sous-additive) — elle ne sous-estime jamais le risque
+d'un portefeuille diversifié.
+
+Probabilité de dépassement du seuil de décision tau :
+
+    P_hat(Y >= tau) = (1/n) * somme_i 1[Y_i >= tau]        -> prob_exceeds_threshold
+
+— le complément de la fonction de répartition empirique évalué au seuil de
+décision, c.-à-d. la fraction de scénarios simulés qui ferait basculer le
+client en « défaut ».
+
+Distribution de classe de risque : appliquer les mêmes seuils fixes utilisés
+ailleurs dans l'application à chaque Y_i,
+
+    risk_class(Y_i) = élevé    si Y_i >= 0.7
+                       moyen    si 0.4 <= Y_i < 0.7
+                       faible   si Y_i <  0.4
+
+et compter les occurrences de chaque label -> risk_distribution.
+
+Histogramme : partitionner [0,1] en n_bins intervalles de largeur égale B_k
+et compter combien de Y_i tombent dans chacun -> histogram (bornes + comptes).
+
+Extrêmes : les k plus petites et k plus grandes Y_i (statistiques d'ordre
+Y_(1)..Y_(k) et Y_(n-k+1)..Y_(n)), rapportées avec les valeurs exactes des
+variables choquées X~^(i) qui les ont produites -> extremes.
+
+Pourquoi c'est le bon outil ici
+-----------------------------------
+Le modèle f n'a pas de forme close (RandomForest/XGBoost + encodeurs), donc
+il n'existe aucun moyen analytique de propager l'incertitude des variables
+d'entrée jusqu'à l'incertitude de la PD prédite. Monte Carlo contourne
+entièrement ce problème : il traite f comme une boîte noire et se contente
+de l'évaluer de nombreuses fois, ce qui explique pourquoi c'est un standard
+en finance quantitative pour la tarification et le risque sous incertitude
+de modèle (Glasserman, « Monte Carlo Methods in Financial Engineering »,
+2004), et pourquoi c'est utilisé ici comme moteur de stress test de la
+plateforme.
+
+
+====================================================================
+Comment les variables les plus importantes sont connues AVANT
+d'exécuter SHAP
+====================================================================
+
+C'est possible parce que « variable la plus importante » signifie ici
+quelque chose de différent de ce que SHAP mesure — c'est une propriété
+intégrée au modèle entraîné lui-même, pas quelque chose calculé par client
+au moment de l'inférence.
+
+D'où ça vient
+--------------
+Un RandomForestClassifier est un ensemble d'arbres de décision. Chaque nœud
+interne de chaque arbre est un split sur une seule variable (par ex. « est-ce
+que tresorerie_disponible <= 42 000 ? ») choisi, pendant l'entraînement,
+parce qu'il réduisait le plus l'impureté parmi tous les splits candidats à
+ce nœud. L'impureté ici est l'indice de Gini — une mesure de à quel point les
+labels défaut/non-défaut sont mélangés parmi les échantillons qui atteignent
+ce nœud (0 = parfaitement pur, maximum à un mélange 50/50).
+
+Pour une variable donnée, son « importance » (Mean Decrease in Impurity,
+MDI) est :
+
+    importance(variable j) = somme sur tous les nœuds qui splittent sur j de
+                             ( échantillons_au_nœud / total_échantillons ) * baisse_impureté_au_nœud,
+                             moyennée sur tous les arbres de la forêt, puis
+                             normalisée pour que toutes les importances de
+                             variables somment à 1.
+
+C'est exactement le tableau retourné par model.feature_importances_ de
+scikit-learn — il existe déjà dès que la forêt termine son entraînement. Le
+charger revient simplement à :
+
+    artifact = load_artifact()          # charge le .joblib (preprocessor + model)
+    importances = artifact["model"].feature_importances_
+
+Aucune inférence sur un client spécifique n'est nécessaire — c'est pourquoi
+le classement était disponible avant qu'un seul calcul SHAP ne soit
+exécuté, et pourquoi le même classement exact est utilisé pour colorer les
+labels en rouge sur le formulaire Prédiction de Risque, quel que soit le
+client chargé.
+
+Pourquoi ça diffère fondamentalement de SHAP
+------------------------------------------------
+MDI répond à « à travers les ~10 000 lignes sur lesquelles la forêt a été
+entraînée, sur quelles variables s'est-elle le plus appuyée pour séparer les
+défaillants des non-défaillants ? » — une réponse unique, statique, globale.
+SHAP (expliqué plus bas) répond à « pour les chiffres de CE client précis,
+quelles variables ont poussé la prédiction à la hausse ou à la baisse, et de
+combien ? » — une valeur différente pour chaque client, calculée à la
+demande. Les deux peuvent (et souvent le font) diverger pour un cas
+individuel : une variable globalement mineure peut être localement décisive
+si ce client particulier a une valeur extrême sur celle-ci.
+
+
+====================================================================
+Ce que SHAP fait réellement
+====================================================================
+
+SHAP signifie SHapley Additive exPlanations (Lundberg & Lee, 2017). Il
+répond à une question précise pour une prédiction précise : « dans quelle
+mesure chaque variable d'entrée a-t-elle contribué à éloigner la sortie du
+modèle de sa prédiction moyenne/de référence, pour cette ligne de données
+exacte ? »
+
+D'où vient l'idée (théorie des jeux)
+------------------------------------------
+Le concept est emprunté à la théorie des jeux coopératifs — la valeur de
+Shapley (Shapley, 1953), conçue à l'origine pour répartir équitablement un
+gain entre des joueurs d'une coalition selon leur contribution individuelle.
+SHAP traite une prédiction de la même façon : les « joueurs » sont les
+valeurs des variables d'un client, et le « gain » à répartir équitablement
+est l'écart entre la prédiction moyenne du modèle sur tout l'ensemble
+d'entraînement (la base_value) et sa prédiction réelle pour ce client.
+
+Concrètement, pour une variable j, sa valeur de Shapley moyenne l'effet
+marginal d'« ajouter » la valeur réelle de cette variable, sur tous les
+ordres possibles selon lesquels les variables pourraient être révélées au
+modèle :
+
+    phi_j = somme sur tous les sous-ensembles S de variables ne contenant pas j de
+            [ |S|! * (d - |S| - 1)! / d! ] *
+            [ f(S union {j}) - f(S) ]
+
+où f(S) est la sortie attendue du modèle quand seules les variables de S sont
+connues (les autres sont marginalisées), et d est le nombre total de
+variables. En clair : regarder chaque groupe possible d'« autres variables
+déjà connues », mesurer de combien l'ajout de la variable j à ce groupe
+déplace la prédiction, et moyenner cet effet équitablement sur tous les
+groupes et ordres possibles. C'est la seule méthode d'attribution qui
+satisfait simultanément un ensemble d'axiomes d'équité (efficacité, symétrie,
+variable muette, additivité) — c'est pourquoi elle est préférée aux
+heuristiques d'attribution ad hoc plus simples.
+
+La garantie clé — l'additivité
+----------------------------------
+    base_value + somme_j(phi_j) = f(x)    pour ce client x précis
+
+c.-à-d. les valeurs SHAP d'un client donné s'additionnent toujours exactement
+pour donner l'écart entre la prédiction moyenne et la PD prédite réelle de ce
+client. C'est ce qui permet à la page SHAP d'afficher « Base Value » et
+« Final PD » côte à côte avec un waterfall des contributions par variable qui
+réconcilie les deux exactement.
+
+Pourquoi TreeExplainer spécifiquement (shap_service.py)
+------------------------------------------------------------
+La formule brute de Shapley ci-dessus est combinatoire — la calculer
+exactement nécessiterait d'évaluer le modèle sur 2^d sous-ensembles de
+variables, intraitable pour ~50 variables. Pour les modèles à base d'arbres
+(RandomForest, XGBoost), il existe un algorithme EXACT et efficace, Tree SHAP
+(Lundberg et al., 2018), qui exploite la structure des arbres pour calculer
+des valeurs de Shapley exactes en temps polynomial en suivant les
+contributions des variables le long des chemins de décision de chaque
+arbre. C'est exactement ce que fait :
+
+    explainer = shap.TreeExplainer(artifact["model"])
+    shap_values = explainer.shap_values(transformed_client_row)
+
+— pas d'approximation, pas d'échantillonnage, les valeurs de Shapley
+mathématiquement exactes pour ce modèle et ce client.
+
+Ce que l'application fait avec le résultat
+--------------------------------------------
+1. shap_row = le tableau des valeurs phi_j pour chaque colonne transformée,
+   pour ce client.
+2. top_idx = np.argsort(np.abs(shap_row))[::-1][:top_k] — prendre les top_k
+   variables par contribution absolue (magnitude, sans tenir compte du
+   signe) afin de faire ressortir aussi bien les variables qui augmentent
+   fortement le risque que celles qui le diminuent fortement.
+3. Chacune est étiquetée direction="increase_risk" si phi_j >= 0, sinon
+   "decrease_risk" — c'est ce qui se traduit par les barres rouges/vertes et
+   les labels Augmente/Diminue le risque sur la page SHAP.
+4. La même liste top_k alimente le panneau « variables à plus fort impact »
+   sur les pages SHAP et LLM, recalculée à chaque nouveau client (ou scénario
+   what-if) expliqué.
+
+
+====================================================================
+Ce que signifient TEG, taux directeur et PIB
+====================================================================
+
+TEG — Taux Effectif Global (champ : taux_interet_teg)
+--------------------------------------------------------
+Le coût annuel « tout compris » du prêt pour l'emprunteur, exprimé sous
+forme d'un pourcentage unique. Ce n'est pas seulement le taux d'intérêt
+nominal/affiché — il intègre aussi les coûts annexes obligatoires liés à
+l'obtention du crédit : frais de dossier et de traitement, assurance
+obligatoire, frais d'enregistrement de garantie/collatéral, etc. (selon le
+dictionnaire du dataset : « proxy du taux effectif total »). Deux prêts
+peuvent avoir le même taux d'intérêt affiché mais des TEG très différents si
+l'un porte des frais plus lourds — le TEG est ce qui les rend comparables.
+Un TEG plus élevé alourdit la charge réelle de service de la dette du
+client, ce qui explique pourquoi c'est l'un des champs les plus influents de
+la catégorie Détails du Prêt dans le modèle (il interagit avec les flux de
+trésorerie et la capacité de remboursement).
+
+Taux directeur — taux de la politique monétaire / banque centrale (champ : taux_directeur)
+------------------------------------------------------------------------------------------------
+Le taux d'intérêt de référence fixé par la banque centrale (dans le contexte
+tunisien, le taux directeur clé de la BCT) — le taux auquel elle prête aux
+banques commerciales. C'est une variable macroéconomique dans ce dataset, pas
+quelque chose de spécifique à un client : il varie pour tout le portefeuille
+à la fois. Il compte pour le risque de crédit car les taux de prêt
+commerciaux (y compris les prêts à taux variable, et le repricing au
+renouvellement pour de nombreux prêts PME) sont ancrés dessus — un taux
+directeur plus élevé augmente le coût du crédit pour toute l'économie,
+resserre les conditions de crédit, et est historiquement corrélé à des taux
+de défaut PME plus élevés, en particulier pour les entreprises déjà
+endettées ou à marges étroites. Sur cette plateforme, c'est l'un des champs
+de scénario macro (avec taux_inflation, croissance_pib, taux_chomage) utilisé
+à la fois comme variable directe du modèle et pour définir le contexte
+économique du dossier d'un client.
+
+PIB — Produit Intérieur Brut / croissance du PIB (champ : croissance_pib)
+------------------------------------------------------------------------------
+Croissance du Produit Intérieur Brut — la variation en pourcentage d'une
+année sur l'autre de la valeur totale des biens et services produits dans
+l'économie. C'est l'indicateur phare de l'expansion ou de la contraction de
+l'économie. Pour le risque de crédit PME spécifiquement, la croissance du
+PIB est un indicateur avancé de la demande globale : quand croissance_pib est
+faible ou négative (ralentissement ou récession), les PME connaissent
+généralement une pression sur le chiffre d'affaires, un ralentissement des
+créances, et des taux de défaut plus élevés à travers le portefeuille,
+indépendamment des fondamentaux propres à chaque entreprise — c'est
+exactement le type de risque systémique que le champ « Scénario Économique »
+(scenario_economique : normal / degrade / severe) et les paramètres de choc
+macro de Monte Carlo sont censés capturer.
+
+
+====================================================================
+Choisir QUELS champs stresser dans Monte Carlo : la magnitude SHAP est
+un proxy de la sensibilité, pas la sensibilité elle-même
+====================================================================
+
+Les curseurs de stress Monte Carlo sont désormais alimentés dynamiquement à
+partir des champs les mieux classés par SHAP pour le client actuellement
+chargé (voir app.js, updateStressParamsFromShap), au lieu d'une liste fixe
+sans lien avec le client. C'est un bon choix pratique par défaut, mais il
+convient d'être précis sur ce que cela optimise réellement, car la magnitude
+SHAP et la sensibilité au stress sont deux quantités différentes qui
+concordent généralement — mais pas toujours.
+
+La distinction
+------------------
+SHAP répond à une question d'ATTRIBUTION : « étant donné les valeurs
+ACTUELLES de ce client en ce moment, dans quelle mesure chaque variable a-t-
+elle contribué à éloigner la prédiction de celle du client moyen ? » C'est
+une décomposition de la prédiction ACTUELLE, calculée une fois, au point
+actuel du client dans l'espace des variables.
+
+Monte Carlo a besoin d'une question de SENSIBILITÉ (élasticité locale) à la
+place : « si la valeur de cette variable bougeait d'un montant plausible, de
+combien la prédiction changerait-elle ? » C'est une question sur la PENTE
+LOCALE du modèle autour du point actuel du client, pas sur l'attribution
+actuelle.
+
+Pour un ensemble d'arbres, ces deux notions peuvent diverger dans les deux
+sens :
+- Une variable peut avoir une GRANDE valeur SHAP en ce moment, tout en se
+  situant dans une région des arbres où les splits voisins sont éloignés —
+  la perturber davantage bouge à peine la prédiction (sa contribution
+  actuelle est grande, mais elle n'est pas « au bord d'une falaise »).
+- Une variable peut avoir une PETITE valeur SHAP (proche de zéro) en ce
+  moment — précisément parce que sa valeur actuelle est proche d'un seuil de
+  décision, donc elle ne contribue presque à rien actuellement — pourtant un
+  petit stress pourrait la faire franchir ce seuil et faire osciller
+  fortement la prédiction. SHAP ne signalerait pas cette variable comme
+  importante pour ce client, même si c'est exactement le type de point
+  fragile que Monte Carlo est censé trouver.
+
+Pourquoi la sélection basée sur SHAP est utilisée quand même
+------------------------------------------------------------------
+1. C'est gratuit : le classement est déjà calculé au moment où un analyste a
+   exécuté une explication SHAP, donc aucun aller-retour backend
+   supplémentaire n'est nécessaire pour peupler les curseurs de stress.
+2. En pratique, pour les modèles à base d'arbres, une forte attribution
+   actuelle et une forte sensibilité locale sont fortement corrélées : les
+   variables qui expliquent le plus l'écart d'un client par rapport à la
+   référence ont tendance à être aussi celles les plus proches des seuils
+   qui comptent pour ce type de client, donc généralement aussi celles où un
+   choc de stress a le plus grand effet.
+3. Cela garde le récit de l'outil cohérent pour un analyste crédit :
+   « on stress-teste les variables qui viennent de vous être montrées comme
+   pilotant le risque de ce client » est intuitif et auditable, par
+   opposition à un classement de sensibilité séparé et plus difficile à
+   expliquer.
+
+L'alternative théoriquement plus rigoureuse (non implémentée)
+--------------------------------------------------------------------
+Un scan de sensibilité locale direct répondrait exactement à la question de
+Monte Carlo au lieu de le faire par proxy : pour chaque champ brut
+candidat, perturber d'un petit pas fixe (par ex. +/-1%) autour de la valeur
+réelle du client, réexécuter le modèle une fois par champ, et classer les
+champs par |delta PD| résultant (une estimation par différences finies de la
+dérivée partielle locale d(PD)/d(variable)). Les top-K champs selon cette
+sensibilité mesurée alimenteraient alors les curseurs Monte Carlo, plutôt
+que les top-K par magnitude SHAP. Cela coûte une évaluation de modèle
+supplémentaire par champ candidat (~26 champs bruts stressables ici — peu
+coûteux pour un RandomForest, puisque scikit-learn évalue une forêt complète
+sur un lot de 26 lignes en quelques millisecondes) mais nécessite un
+aller-retour backend supplémentaire avant que le panneau de stress puisse se
+peupler, ce qui explique pourquoi cela a été considéré comme un
+raffinement futur optionnel plutôt que construit par défaut.
+
+
+====================================================================
+Exemple concret : lire un résultat Monte Carlo réel
+====================================================================
+
+Une simulation réelle sur la plateforme a retourné :
+
+    P10 (meilleur cas)      48,3%
+    P50 (médiane)            49,0%
+    P90 (pire cas)           50,2%
+    PD moyenne                49,1%
+    Volatilité (sigma)        0,7%
+    VaR 95 (risque de queue) 50,4%
+    ES 95 (moy. pires 5%)    50,7%
+
+Pourquoi chacun de ces éléments est calculé (récap, appliqué à ces chiffres)
+----------------------------------------------------------------------------------
+- P10/P50/P90 bornent la fourchette « typique » : dans 80% des 2 000-5 000
+  tirages de stress simulés, la PD de ce client se situait entre 48,3% et
+  50,2%. La médiane (49,0%) est presque identique à la moyenne (49,1%), qui
+  elle-même est très proche de la PD de référence — un premier signe que la
+  distribution n'est pas faussée par quelques scénarios extrêmes.
+- La volatilité (sigma = 0,7 point de pourcentage) est l'écart-type de la PD
+  simulée autour de la moyenne. C'est le chiffre le plus informatif ici : il
+  indique que même sous les bandes de stress configurées (par ex. des
+  variations de +/-20-30% sur le chiffre d'affaires, la trésorerie, les
+  retards de paiement...), la PD prédite de ce client bouge à peine.
+  Comparer cela à un client fragile, où les mêmes bandes de stress
+  produiraient plutôt un sigma de 8-10 points.
+- VaR 95 (50,4%) n'est que ~1,3 point au-dessus de la moyenne — les 5% pires
+  scénarios simulés ne sont pas beaucoup pires que le cas typique.
+- ES 95 (50,7%) — la PD moyenne au sein de cette pire tranche de 5% — est à
+  peine au-dessus du VaR 95 lui-même, ce qui signifie que même la queue de la
+  queue n'est pas beaucoup pire que son propre seuil. Il n'y a pas de
+  « longue traîne » de scénarios catastrophiques cachée au-delà du 95e
+  percentile.
+
+Ce que ce résultat particulier indique à un analyste
+----------------------------------------------------------
+Une dispersion aussi étroite (48,3%-50,7%, sigma inférieur à 1 point)
+signifie que l'évaluation du risque du client est ROBUSTE aux stress
+configurés : quoi qu'il arrive au chiffre d'affaires, à la trésorerie ou au
+comportement de paiement dans les bandes testées, la PD reste ancrée près de
+~49%. C'est une affirmation matériellement différente, et plus utile, que
+« la PD est de 49% » seule — elle indique à l'analyste que ce chiffre peut
+être considéré comme fiable et ne risquant pas d'osciller fortement dans des
+conditions défavorables réalistes, ce qu'une simple estimation ponctuelle ne
+peut jamais confirmer à elle seule. (C'est aussi cohérent avec une
+observation antérieure de ce document : ce profil de client particulier se
+situe dans une région où la prédiction du modèle n'est que faiblement
+sensible à une seule variable, ce qui explique exactement pourquoi ses
+attributions SHAP et sa volatilité Monte Carlo sont toutes deux faibles —
+voir les notes d'investigation « toujours 49% » pour la cause sous-jacente.)
+
+
+====================================================================
+Le seuil de décision (« Seuil ») sur la page Prédiction de Risque : ce
+qu'il est, et qui le fixe
+====================================================================
+
+Ce que c'est
+--------------
+Le modèle lui-même ne produit jamais qu'une probabilité de défaut (PD)
+continue entre 0 et 1 — il ne produit jamais « risqué » ou « pas risqué »
+par lui-même. Le seuil (tau) est la coupure appliquée sur cette probabilité
+pour la transformer en décision binaire :
+
+    prédiction = 1 (en défaut / risque élevé)   si PD >= tau
+    prédiction = 0 (pas en défaut / sûr)         si PD <  tau
+
+C'est exactement ce que fait backend/app/services/model_service.py :
+`pred = int(proba_default >= threshold)`. Changer tau ne change absolument
+pas l'estimation de PD du modèle — cela ne change que l'endroit où la ligne
+est tracée sur cette estimation.
+
+Qui le choisit, et pourquoi ce n'est PAS une décision de modélisation
+--------------------------------------------------------------------------
+Le seuil est un paramètre de politique commerciale/de risque, pas quelque
+chose appris par ou dérivé du modèle. Il encode l'appétit pour le risque de
+la banque — comment elle veut arbitrer entre deux types d'erreurs :
+
+- Un seuil BAS signale plus de clients comme risqués : moins de vrais
+  défaillants passent inaperçus (moins de faux négatifs), mais plus de
+  clients réellement sûrs sont signalés à tort aussi (plus de faux positifs)
+  — coûtant des affaires en rejetant/sur-scrutant de bons clients.
+- Un seuil ÉLEVÉ signale moins de clients comme risqués : moins de bons
+  clients signalés à tort (moins de faux positifs), mais plus de
+  défaillants réels passent pour « sûrs » (plus de faux négatifs) — coûtant
+  de l'argent via des défauts manqués.
+
+Il n'existe pas de seuil universellement « correct » — la bonne valeur
+dépend de la structure de coûts de la banque (coût d'un défaut manqué contre
+coût du rejet d'un bon client), des exigences réglementaires de fonds
+propres, et de la tolérance au risque. Cette décision appartient à la
+fonction de politique de risque de crédit / gestion des risques de la
+banque, pas à l'équipe data science ou au modèle.
+
+Où il est réellement fixé sur cette plateforme
+------------------------------------------------
+- Valeur par défaut : le paramètre DEFAULT_THRESHOLD dans backend/.env
+  (backend/app/config.py), appliqué à chaque prédiction sauf surcharge.
+- Surcharge par requête : POST /predict?threshold=0.4 permet à un analyste
+  de tester un seuil différent pour un seul appel sans changer la valeur par
+  défaut globale — utile pour l'exploration « quelle serait la décision sous
+  une politique plus stricte », sans que cette exploration ne devienne
+  silencieusement la politique de toute la banque.

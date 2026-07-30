@@ -295,19 +295,49 @@
 \begin{document}
 
 % ════════════════════════════════════════════════════════════
-%  PAGES PRÉLIMINAIRES  (numérotation romaine ; la numérotation
-%  arabe démarre à l'Introduction générale)
+%  PAGES PRÉLIMINAIRES  (numérotation arabe continue : 1, 2, 3...)
 % ════════════════════════════════════════════════════════════
-\pagenumbering{roman}
+\pagenumbering{arabic}
 \setcounter{page}{1}
 
 \chapter*{Dédicace}
 \thispagestyle{plain}
-% [Texte de dédicace à compléter]
+
+\vspace*{\fill}
+\begin{center}
+\itshape
+À \textbf{Dieu Tout-Puissant}, pour Sa grâce et Ses bienfaits,\\[1.2em]
+
+Je dédie ce modeste travail\,:\\[1.2em]
+
+À mon très cher père, \textbf{Mongi}, ma source de force et mon modèle,\\[0.6em]
+À ma très chère mère, \textbf{Dora}, pour son amour et ses sacrifices sans fin,\\[0.6em]
+À mes chères sœurs, \textbf{Sarah} et \textbf{Heger}, pour leur soutien et leur tendresse,\\[0.6em]
+À ma grand-mère, \textbf{Beya}, pour ses prières et sa bienveillance,\\[0.6em]
+À mes amis, \textbf{Sarra}, \textbf{Syrine}, \textbf{Dhia} et \textbf{Ramy}, pour leur présence et leurs encouragements.\\[1.6em]
+
+En témoignage de ma profonde reconnaissance et de mon affection.
+\end{center}
+\vspace*{\fill}
 
 \chapter*{Remerciements}
 \thispagestyle{plain}
-% [Texte de remerciements à compléter]
+
+Au terme de ce projet de fin d'études, je tiens à exprimer ma profonde gratitude à toutes
+les personnes qui ont contribué, de près ou de loin, à son aboutissement.
+
+Je remercie tout particulièrement mes encadrants professionnels, \textbf{Monsieur Lassaad Maalej}
+et \textbf{Madame Ikbel Aloui}, ainsi que mon encadrante académique, \textbf{Madame Saoussen
+Lakhdher}, pour leur disponibilité, leurs conseils précieux et la confiance qu'ils m'ont accordée
+tout au long de ce travail. Leur accompagnement et leur expertise ont été déterminants pour la
+réussite de ce projet.
+
+Mes remerciements s'adressent également à l'ensemble de l'équipe de \textbf{MPSoft} pour son
+accueil chaleureux et son esprit de collaboration, ainsi qu'au corps enseignant de l'\textbf{ESPRIT}
+pour la qualité de la formation dispensée.
+
+Enfin, j'exprime toute ma reconnaissance aux membres du jury pour l'honneur qu'ils me font en
+acceptant d'évaluer ce travail.
 
 {
   \renewcommand{\contentsname}{Table des matières}
@@ -337,11 +367,9 @@
 \end{tabular}
 
 % ════════════════════════════════════════════════════════════
-%  INTRODUCTION GÉNÉRALE  --  la numérotation arabe commence ici
+%  INTRODUCTION GÉNÉRALE
 % ════════════════════════════════════════════════════════════
 \clearpage
-\pagenumbering{arabic}
-\setcounter{page}{1}
 
 \chapterunnumbered{Introduction générale}
 
@@ -464,7 +492,16 @@ et pleine explicabilité des décisions. Cet agent doit~:
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=5cm]{logo_mpsoft}
+  \definecolor{MPGray}{RGB}{176,176,176}
+  \definecolor{MPRed}{RGB}{213,20,32}
+  \resizebox{4.6cm}{!}{%
+  \begin{tikzpicture}
+    \fill[MPGray, rounded corners=2pt] (0,0) rectangle (4,3.4);
+    \node[font=\fontsize{48}{48}\bfseries\sffamily, text=white] at (2,2.45) {MP};
+    \node[font=\fontsize{42}{42}\bfseries\sffamily, text=MPRed]  at (2,1.05) {Soft};
+  \end{tikzpicture}}\\[0.18cm]
+  {\footnotesize\sffamily\color{gray!70}%
+    M\,A\,N\,A\,G\,E\,R~~P\,A\,R\,T\,N\,E\,R~~S\,O\,F\,T\,W\,A\,R\,E}
   \caption{Logo de Manager Partner Software}
   \label{fig:logo_mpsoft}
 \end{figure}
@@ -497,7 +534,61 @@ Pour concrétiser cette ambition, l'entreprise s'investit dans~:
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.85\textwidth]{organigramme_mpsoft}
+  \definecolor{OrgCrimson}{RGB}{168,24,58}
+  \definecolor{OrgOrange}{RGB}{240,130,20}
+  \definecolor{OrgBlue}{RGB}{20,70,150}
+  \definecolor{OrgLBlue}{RGB}{150,200,235}
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+      box/.style={rounded corners=1pt, minimum width=3.4cm, minimum height=0.95cm,
+                  align=center, text=white, font=\bfseries, inner sep=3pt},
+      lo/.style={draw=OrgOrange, line width=1.3pt, rounded corners=6pt},
+      lb/.style={draw=OrgBlue,   line width=1.3pt, rounded corners=6pt},
+      ll/.style={draw=OrgLBlue,  line width=1.3pt, rounded corners=6pt}]
+
+    % ── Direction générale ──
+    \node[fill=OrgCrimson, text=white, minimum width=1.15cm, minimum height=5.6cm,
+          font=\Large\bfseries, rounded corners=1pt] (dg) at (0,0) {\rotatebox{90}{DG}};
+
+    % ── Niveau 1 : directions (orange) ──
+    \node[box, fill=OrgOrange] (mc)   at (4.1, 1.95) {Marketing+Commercial};
+    \node[box, fill=OrgOrange] (af)   at (4.1, 0.00) {Administratif+Financier};
+    \node[box, fill=OrgOrange] (tech) at (4.1,-1.95) {Technique};
+
+    % ── Niveau 2 : pôles techniques (bleu) ──
+    \node[box, fill=OrgBlue] (infra)  at (8.6, 0.40) {Infrastructure};
+    \node[box, fill=OrgBlue] (dev)    at (8.6,-1.35) {Développement};
+    \node[box, fill=OrgBlue] (met)    at (8.6,-3.10) {Métier};
+
+    % ── Niveau 3 : sous-pôles infrastructure (bleu clair) ──
+    \node[box, fill=OrgLBlue] (sec)   at (13.1, 1.75) {Sécurité};
+    \node[box, fill=OrgLBlue] (res)   at (13.1, 0.40) {Réseau};
+    \node[box, fill=OrgLBlue] (cloud) at (13.1,-0.95) {Cloud et DeVops};
+
+    % ── Connexions DG -> directions ──
+    \coordinate (t1) at ($(dg.east)+(0.55,0)$);
+    \draw[lo] (dg.east)   -- (t1);
+    \draw[lo] (t1|-mc)    -- (t1|-tech);
+    \draw[lo] (t1|-mc)    -- (mc.west);
+    \draw[lo] (t1|-af)    -- (af.west);
+    \draw[lo] (t1|-tech)  -- (tech.west);
+
+    % ── Connexions Technique -> pôles ──
+    \coordinate (t2) at ($(tech.east)+(0.55,0)$);
+    \draw[lb] (tech.east) -- (t2|-tech);
+    \draw[lb] (t2|-infra) -- (t2|-met);
+    \draw[lb] (t2|-infra) -- (infra.west);
+    \draw[lb] (t2|-dev)   -- (dev.west);
+    \draw[lb] (t2|-met)   -- (met.west);
+
+    % ── Connexions Infrastructure -> sous-pôles ──
+    \coordinate (t3) at ($(infra.east)+(0.55,0)$);
+    \draw[ll] (infra.east) -- (t3|-infra);
+    \draw[ll] (t3|-sec)    -- (t3|-cloud);
+    \draw[ll] (t3|-sec)    -- (sec.west);
+    \draw[ll] (t3|-res)    -- (res.west);
+    \draw[ll] (t3|-cloud)  -- (cloud.west);
+  \end{tikzpicture}}
   \caption{Organigramme de Manager Partner Software}
   \label{fig:orga_mpsoft}
 \end{figure}
@@ -856,6 +947,50 @@ valeur de Shapley. Contrairement à LIME, SHAP offre des garanties théoriques d
 cohérence et de précision locale, ce qui en fait l'outil central de notre couche
 d'explicabilité~\cite{shapdoc}.
 
+\subsubsection{Fondements en théorie des jeux : la valeur de Shapley}
+
+L'idée sous-jacente à SHAP provient de la théorie des jeux coopératifs, et plus précisément de
+la valeur de Shapley, proposée par Lloyd Shapley en 1953 pour répartir équitablement un gain
+commun entre les membres d'une coalition, en fonction de la contribution individuelle de
+chacun. SHAP transpose ce cadre à l'explication d'une prédiction : les « joueurs » sont les
+variables décrivant un dossier de crédit, et le « gain » à répartir est l'écart entre la
+prédiction moyenne du modèle sur l'ensemble du portefeuille (la valeur de référence, ou
+\textit{base value}) et la prédiction obtenue pour ce dossier précis.
+
+Concrètement, la contribution attribuée à chaque variable correspond à sa contribution
+marginale moyenne : on imagine que les variables sont révélées au modèle une à une, dans un
+ordre donné, et l'on mesure de combien la prédiction se déplace lorsque la variable considérée
+est ajoutée à celles déjà connues. Comme ce déplacement dépend de l'ordre dans lequel les
+variables sont révélées, la valeur de Shapley moyenne cette contribution sur l'ensemble des
+ordres possibles, ce qui garantit un partage équitable, indépendant de tout choix arbitraire
+d'ordonnancement.
+
+Cette origine en théorie des jeux confère à SHAP des propriétés d'équité que ne possèdent pas
+les heuristiques d'attribution \textit{ad hoc} : deux variables ayant un effet strictement
+identique sur la prédiction reçoivent la même contribution (symétrie), une variable sans aucun
+effet reçoit une contribution nulle (variable muette), et la somme des contributions
+individuelles reconstitue exactement l'écart entre la prédiction moyenne et la prédiction du
+dossier étudié (efficacité, ou additivité). C'est cette dernière propriété qui permet, dans
+notre plateforme, de présenter côte à côte la valeur de référence et la PD finale, reliées par
+un diagramme en cascade (\textit{waterfall}) des contributions de chaque variable.
+
+\subsubsection{Unité des contributions SHAP : une précaution d'interprétation}
+
+Un point souvent négligé lors de l'interprétation des valeurs SHAP concerne l'unité dans
+laquelle elles s'expriment — celle-ci correspond à la sortie \emph{brute} du modèle, et non
+nécessairement à une probabilité. Pour un modèle d'ensemble d'arbres entraîné en classification
+(gradient boosting notamment), \texttt{shap.TreeExplainer} restitue par défaut des contributions
+exprimées en \textit{log-odds} (le score brut avant passage par la fonction logistique), et non
+en points de probabilité de défaut~\cite{shapdoc}. Une contribution de 0,8 signifie alors que la
+variable décale le score en log-odds de 0,8 — un déplacement qui ne se traduit pas linéairement
+en variation de PD, en particulier loin des extrémités de l'échelle de probabilité. Pour obtenir
+des contributions directement interprétables par un comité de crédit en points de PD, il est
+nécessaire d'invoquer l'explainer avec le paramètre \texttt{model\_output="probability"}, au prix
+toutefois d'une additivité SHAP qui n'est plus alors garantie de façon exacte, mais seulement
+approchée. Cette distinction d'unité doit être explicitée dans toute restitution des résultats
+SHAP à un public métier, sous peine d'une lecture erronée de l'ampleur réelle de l'effet d'une
+variable sur le risque.
+
 \subsection{Explicabilité globale versus locale}
 
 L'explicabilité globale décrit le comportement d'ensemble du modèle sur le portefeuille
@@ -970,6 +1105,66 @@ nombre de réalisations aléatoires de ces variables. Pour chaque réalisation, 
 pertes du portefeuille, ce qui produit au final une distribution empirique des pertes plutôt
 qu'une valeur ponctuelle.
 
+Formellement, soit $Y = g(X)$ la grandeur d'intérêt — perte de portefeuille, probabilité de
+défaut simulée, etc. — où $X$ est un vecteur aléatoire de facteurs de risque de loi $\mathbb{P}_X$
+et $g$ une fonction de valorisation potentiellement non linéaire et sans forme close (dans notre
+cas, le pipeline complet ingénierie de variables~$\to$~préprocesseur~$\to$~modèle). À partir de
+$n$ tirages indépendants et identiquement distribués $X^{(1)}, \dots, X^{(n)} \sim \mathbb{P}_X$,
+l'estimateur de Monte Carlo de l'espérance $\mathbb{E}[Y]$ s'écrit :
+
+\begin{equation}
+  \hat{Y}_n = \frac{1}{n} \sum_{i=1}^{n} g\big(X^{(i)}\big).
+  \label{eq:mc-estimator}
+\end{equation}
+
+Par la loi forte des grands nombres, $\hat{Y}_n \to \mathbb{E}[Y]$ presque sûrement lorsque
+$n \to \infty$. Le théorème central limite précise en outre la vitesse de convergence : si
+$\sigma^2 = \mathrm{Var}(Y) < \infty$, alors
+
+\begin{equation}
+  \sqrt{n}\,\big(\hat{Y}_n - \mathbb{E}[Y]\big) \;\xrightarrow{\ d\ }\; \mathcal{N}\big(0,\, \sigma^2\big),
+  \label{eq:mc-clt}
+\end{equation}
+
+de sorte que l'erreur d'estimation décroît en $\mathcal{O}(\sigma / \sqrt{n})$, \emph{indépendamment
+de la dimension} $d$ du vecteur de facteurs $X$. C'est précisément cette propriété qui rend Monte
+Carlo supérieur aux méthodes d'intégration numérique déterministes (grilles, quadrature), dont
+l'erreur se dégrade exponentiellement avec $d$ — le classique \textit{fléau de la
+dimension}~\cite{glasserman2004}. C'est aussi ce qui justifie, en pratique, l'emploi de quelques
+centaines à quelques milliers de tirages : doubler la précision de l'estimateur exige de
+quadrupler le nombre de simulations, non de le doubler.
+
+\subsubsection{Justification théorique en termes intuitifs}
+
+Au-delà de sa formulation mathématique, l'intuition qui justifie la méthode de Monte Carlo peut
+se résumer sans recourir au formalisme. Le principe repose sur la loi des grands nombres : si
+l'on répète un très grand nombre de fois un tirage aléatoire représentatif d'un phénomène
+incertain, la moyenne des résultats obtenus se rapproche de plus en plus de la valeur « réelle »
+que l'on cherche à connaître, même lorsque celle-ci ne peut être calculée directement — parce
+que le modèle sous-jacent (ici, la chaîne ingénierie de variables puis préprocesseur puis
+modèle XGBoost) est trop complexe pour être analysé de façon analytique. Autrement dit, simuler
+un grand nombre de dossiers de crédit « plausibles » et observer la distribution des
+probabilités de défaut ainsi obtenues permet d'approcher, de façon empirique, la véritable
+distribution du risque, sans qu'il soit nécessaire d'en connaître la formule.
+
+Le théorème central limite apporte une seconde garantie, tout aussi intuitive : plus le nombre
+de tirages augmente, plus l'estimation obtenue se stabilise autour de la valeur recherchée, et
+l'ampleur de l'erreur restante diminue de façon prévisible et régulière à mesure que les
+simulations s'accumulent. Un résultat remarquable, et déterminant pour son usage pratique, est
+que cette vitesse de convergence ne dépend pas du nombre de variables prises en compte dans la
+simulation : qu'un dossier de crédit comporte une dizaine ou plusieurs dizaines de variables
+(chiffre d'affaires, trésorerie, taux d'intérêt, indicateurs macro-économiques, etc.), la
+précision obtenue pour un même nombre de tirages reste comparable. C'est précisément ce qui
+rend la méthode praticable pour des problèmes à de nombreuses variables, là où des approches
+déterministes par quadrillage systématique de l'espace des possibles deviendraient rapidement
+impraticables à mesure que le nombre de variables augmente.
+
+Cette double garantie — convergence vers la bonne valeur, et vitesse de convergence
+indépendante de la dimension du problème — est ce qui légitime, sur le plan théorique, l'usage
+de quelques milliers de simulations seulement pour caractériser de façon fiable la distribution
+du risque d'un dossier ou d'un portefeuille, sans qu'il soit nécessaire d'expliciter la formule
+mathématique sous-jacente pour en comprendre la portée.
+
 \subsubsection{Étapes de mise en \oe uvre}
 
 Le déroulement type d'une simulation Monte Carlo appliquée au risque de crédit comprend la
@@ -991,6 +1186,35 @@ l'Expected Shortfall (ou VaR conditionnelle) en complète l'analyse en quantifia
 perte moyenne au-delà de ce seuil. Ces indicateurs offrent une vision quantifiée et
 probabilisée du risque extrême du portefeuille, particulièrement adaptée à l'évaluation de
 portefeuilles PME hétérogènes et sensibles aux chocs.
+
+Formellement, pour un niveau de confiance $\alpha \in (0,1)$ (typiquement 95~\% ou 99~\%), la
+Value-at-Risk est le quantile d'ordre $\alpha$ de la distribution de la perte (ou, dans notre cas,
+de la probabilité de défaut simulée) $Y$ :
+
+\begin{equation}
+  \mathrm{VaR}_\alpha(Y) = \inf\big\{\, y \in \mathbb{R} \;:\; \mathbb{P}(Y \le y) \ge \alpha \,\big\}.
+  \label{eq:var}
+\end{equation}
+
+À partir de l'échantillon simulé $\{Y_1, \dots, Y_n\}$, cette quantité s'estime naturellement par
+le quantile empirique d'ordre $\alpha$ de l'échantillon trié. La VaR présente cependant une
+limite bien connue : elle ne renseigne en rien sur l'ampleur des pertes \emph{au-delà} du seuil
+$\alpha$. L'Expected Shortfall (ES) corrige ce défaut en moyennant les réalisations qui
+dépassent effectivement ce seuil :
+
+\begin{equation}
+  \mathrm{ES}_\alpha(Y) = \mathbb{E}\big[\, Y \;\big|\; Y \ge \mathrm{VaR}_\alpha(Y) \,\big]
+    \;\approx\; \frac{1}{|T_\alpha|} \sum_{i \in T_\alpha} Y_i,
+    \qquad T_\alpha = \big\{\, i \;:\; Y_i \ge \mathrm{VaR}_\alpha(Y) \,\big\}.
+  \label{eq:es}
+\end{equation}
+
+Contrairement à la VaR, l'ES est une mesure de risque \emph{cohérente} : elle est notamment
+sous-additive, ce qui garantit qu'elle ne sous-estime jamais le risque d'un portefeuille
+diversifié — une propriété que la VaR ne vérifie pas en général~\cite{glasserman2004}. C'est
+pourquoi les cadres prudentiels récents tendent à privilégier l'ES comme mesure de référence du
+risque extrême, la VaR restant néanmoins largement utilisée pour sa simplicité
+d'interprétation.
 
 \subsubsection{Apports et limites}
 
@@ -2739,7 +2963,37 @@ autour de la référence traduit une bonne résilience.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.8\textwidth]{monte_carlo_distribution}
+  \begin{tikzpicture}[x=11.5cm, y=5cm]
+    % ── cadre et axes ────────────────────────────────────────
+    \draw[->, thick] (0,0) -- (1.04,0) node[right, font=\footnotesize] {PD};
+    \draw[->, thick] (0,0) -- (0,1.06) node[above, font=\footnotesize] {Fréquence};
+    \foreach \t in {0,0.2,0.4,0.6,0.8,1.0}{
+      \draw (\t,0) -- (\t,-0.02) node[below, font=\tiny] {\t};
+    }
+    % ── histogramme des PD simulées (hauteurs normalisées) ───
+    % centres de classe / hauteurs (distribution décalée vers la droite, queue épaisse)
+    \foreach \c/\h in {0.05/0.06, 0.15/0.16, 0.25/0.34, 0.35/0.58, 0.45/0.82,
+                       0.55/1.00, 0.65/0.80, 0.75/0.52, 0.85/0.30, 0.95/0.14}{
+      \fill[gray!35, draw=gray!60] ({\c-0.05},0) rectangle ({\c+0.05},\h);
+    }
+    % ── PD de référence (baseline) ──────────────────────────
+    \draw[thick, DarkGray, dashed] (0.30,0) -- (0.30,1.02);
+    \node[above, font=\tiny, text=DarkGray, align=center] at (0.30,1.02)
+      {PD de\\référence\\0,30};
+    % ── VaR 95 % ────────────────────────────────────────────
+    \draw[very thick, EspritRed] (0.78,0) -- (0.78,0.92);
+    \node[above, font=\scriptsize\bfseries, text=EspritRed] at (0.78,0.92) {VaR 95\,\% = 0,68};
+    % ── zone de queue (au-delà de la VaR) + Expected Shortfall ─
+    \foreach \c/\h in {0.85/0.30, 0.95/0.14}{
+      \fill[EspritRed!25, draw=EspritRed!50] ({\c-0.05},0) rectangle ({\c+0.05},\h);
+    }
+    \draw[very thick, EspritRed, densely dotted] (0.90,0) -- (0.90,0.55);
+    \node[above right, font=\scriptsize, text=EspritRed] at (0.90,0.42)
+      {\; ES 95\,\% = 0,77};
+    % ── légende de la queue ─────────────────────────────────
+    \node[font=\tiny, text=EspritRed, align=center] at (0.90,-0.10)
+      {5\,\% des scénarios\\les plus adverses};
+  \end{tikzpicture}
   \caption{Distribution des PD simulées sous chocs (VaR et Expected Shortfall à 95\,\%)}
   \label{fig:mc_distribution}
 \end{figure}
