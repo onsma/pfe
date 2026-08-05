@@ -42,7 +42,7 @@ Docs:
 
 ## Notes
 
-- Backend expects `d:/BFPME/data/option_c_randomforest_model.joblib`.
+- Backend expects `c:/pfe/data/option_c_randomforest_model.joblib`.
 - After retraining, either restart uvicorn or call `POST /metadata/reload-model` so the new joblib is loaded (artifacts are cached in memory).
 - Train with `python scripts/train_option_c_randomforest.py` (uses `data/final_dataset.csv`, Option C feature set aligned with the notebook). The deployed model is RandomForest; `scripts/train_option_c_xgboost.py` remains available for the XGBoost variant.
 - SHAP explanations are computed on transformed features from the preprocessor.

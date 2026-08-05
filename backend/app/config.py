@@ -13,15 +13,15 @@ class Settings(BaseSettings):
     app_port: int = Field(default=8000, alias="APP_PORT")
 
     model_artifact_path: Path = Field(
-        default=Path("d:/BFPME/data/option_c_randomforest_model.joblib"),
+        default=Path("c:/pfe/data/option_c_randomforest_model.joblib"),
         alias="MODEL_ARTIFACT_PATH",
     )
     model_metrics_path: Path = Field(
-        default=Path("d:/BFPME/data/option_c_randomforest_metrics.json"),
+        default=Path("c:/pfe/data/option_c_randomforest_metrics.json"),
         alias="MODEL_METRICS_PATH",
     )
     dataset_path: Path = Field(
-        default=Path("d:/BFPME/data/final_dataset.csv"),
+        default=Path("c:/pfe/data/final_dataset.csv"),
         alias="DATASET_PATH",
     )
 

@@ -107,8 +107,8 @@ Static HTML/CSS/JS — no build step. Served by FastAPI at `/dashboard`. The sam
 ## Configuration (`.env`)
 
 ```
-MODEL_ARTIFACT_PATH=d:/BFPME/data/option_c_xgboost_model.joblib
-MODEL_METRICS_PATH=d:/BFPME/data/option_c_xgboost_metrics.json
+MODEL_ARTIFACT_PATH=c:/pfe/data/option_c_xgboost_model.joblib
+MODEL_METRICS_PATH=c:/pfe/data/option_c_xgboost_metrics.json
 LLM_ENABLED=false
 LLM_BASE_URL=http://127.0.0.1:11434/v1   # Ollama default
 LLM_MODEL=qwen2.5:7b-instruct

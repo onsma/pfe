@@ -364,6 +364,17 @@ acceptant d'évaluer ce travail.
   \textbf{SCRUM} & Cadre de gestion de projet Agile \\
   \textbf{UML}   & Langage de Modélisation Unifié \\
   \textbf{PME}   & Petite et Moyenne Entreprise \\
+  \textbf{BFPME} & Banque de Financement des Petites et Moyennes Entreprises \\
+  \textbf{MPSoft}& Manager Partner Software \\
+  \textbf{XGBoost} & \textit{eXtreme Gradient Boosting} \\
+  \textbf{LightGBM} & \textit{Light Gradient Boosting Machine} \\
+  \textbf{HTTP}  & \textit{HyperText Transfer Protocol} \\
+  \textbf{PIB}   & Produit Intérieur Brut \\
+  \textbf{DSCR}  & \textit{Debt Service Coverage Ratio} (ratio de couverture du service de la dette) \\
+  \textbf{DPD}   & \textit{Days Past Due} (jours de retard de paiement) \\
+  \textbf{BFR}   & Besoin en Fonds de Roulement \\
+  \textbf{FDR}   & Fonds de Roulement \\
+  \textbf{ES}    & \textit{Expected Shortfall} \\
 \end{tabular}
 
 % ════════════════════════════════════════════════════════════
@@ -2392,6 +2403,51 @@ XGBoost       & \texttt{n\_estimators=500}, \texttt{max\_depth=5}, \texttt{learn
 \end{tabularx}
 \end{table}
 
+\subsubsection{Candidat additionnel : LightGBM}
+
+Postérieurement à la comparaison ci-dessus, un troisième algorithme de \textit{gradient
+boosting}, LightGBM~\cite{ke2017}, a été évalué à titre de candidat additionnel sur le
+périmètre de variables retenu (option~C). Contrairement à XGBoost, qui développe ses arbres
+niveau par niveau, LightGBM privilégie une croissance \textit{leaf-wise} (le nœud feuille
+offrant le plus fort gain est développé en priorité), ce qui le rend en général plus rapide à
+entraîner et nativement adapté aux variables catégorielles. Cette évaluation fait l'objet du
+notebook \texttt{notebook/classification\_option\_C\_lightgbm.ipynb}, construit sur le même
+protocole que le sprint (même partition \textit{train}/\textit{test}, même graine aléatoire,
+mêmes métriques), afin que la comparaison porte uniquement sur l'algorithme. Ses
+hyperparamètres reprennent, pour comparer à configuration égale, les mêmes ordres de grandeur
+que XGBoost (\texttt{n\_estimators=500}, \texttt{max\_depth=5}, \texttt{learning\_rate=0.05},
+\texttt{subsample=0.85}, \texttt{colsample\_bytree=0.85}), avec le paramètre propre à
+LightGBM \texttt{num\_leaves=31} qui borne la complexité de sa croissance \textit{leaf-wise}.
+
+Le tableau~\ref{tab:lightgbm_comparaison} reporte les métriques des trois modèles sur ce même
+échantillon de test.
+
+\begin{table}[H]
+\centering
+\caption{Comparaison Random Forest / XGBoost / LightGBM sur le périmètre déployé (option~C)}
+\label{tab:lightgbm_comparaison}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l Y Y Y Y Y@{}}
+\toprule
+\textbf{Modèle} & \textbf{Exactitude} & \textbf{Précision} & \textbf{Rappel} & \textbf{F1} & \textbf{AUC-ROC} \\
+\midrule
+Random Forest        & 0{,}856 & 0{,}871 & 0{,}874 & 0{,}873 & 0{,}891 \\
+XGBoost (déployé)     & 0{,}855 & 0{,}868 & 0{,}875 & 0{,}872 & 0{,}889 \\
+LightGBM              & 0{,}854 & 0{,}868 & 0{,}874 & 0{,}871 & 0{,}885 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Sur ce jeu de données et ce protocole, LightGBM se situe dans le même ordre de grandeur que
+Random Forest et XGBoost sur les cinq métriques, sans les dépasser~: son AUC-ROC (0{,}885)
+reste légèrement en retrait de celui de XGBoost (0{,}889) et de Random Forest (0{,}891), de
+même pour l'exactitude, la précision et le F1-score. L'écart étant faible et potentiellement
+du bruit d'échantillonnage, il ne constitue pas un gain net suffisant pour justifier de le
+retenir à la place de XGBoost~; en particulier, comme \texttt{shap.TreeExplainer}~\cite{shapdoc}
+supporte nativement LightGBM au même titre que XGBoost, un remplacement futur n'imposerait pas
+de reconstruire la couche d'explicabilité, mais resterait conditionné à une amélioration
+mesurable et stable du pouvoir discriminant sur plusieurs graines aléatoires.
+
 \subsection{Résultats comparatifs}
 
 Les courbes ROC et les métriques comparées des options A, B et C
@@ -3131,6 +3187,10 @@ l'échelle du portefeuille) et l'extension à d'autres segments ou clients de MP
 \bibitem{chen2016} T.~Chen et C.~Guestrin, ``XGBoost: A Scalable Tree Boosting System'',
   \emph{Proc. 22nd ACM SIGKDD Int. Conf. on Knowledge Discovery and Data Mining},
   p.~785--794, 2016.
+
+\bibitem{ke2017} G.~Ke \textit{et al.}, ``LightGBM: A Highly Efficient Gradient Boosting
+  Decision Tree'', \emph{Advances in Neural Information Processing Systems (NeurIPS)},
+  vol.~30, 2017.
 
 \bibitem{pedregosa2011} F.~Pedregosa \textit{et al.}, ``Scikit-learn: Machine Learning in
   Python'', \emph{Journal of Machine Learning Research}, vol.~12, p.~2825--2830, 2011.

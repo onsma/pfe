@@ -3,7 +3,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[french]{babel}
 \usepackage{geometry}
-\usepackage{hyperref}
+\usepackage[hidelinks]{hyperref}
 \usepackage{enumitem}
 \usepackage{booktabs}
 \geometry{margin=2.5cm}
@@ -51,6 +51,26 @@ La base finale contient:
   \item des ratios derives,
   \item une cible de classification binaire: \texttt{default\_flag}.
 \end{itemize}
+
+\subsection{Structure du referentiel source \texttt{BTS\_INFO.xlsx}}
+
+\texttt{texts/BTS\_INFO.xlsx} est le referentiel reel du systeme de scoring BFPME (donnee de configuration de production, pas une donnee synthetique). Il documente integralement le moteur de notation utilise pour evaluer les demandes de financement PME, et sert de base a la generation de \texttt{data/bfpme\_synthetic\_dataset.csv} via \texttt{scripts/generate\_dataset.py}.
+
+Il est compose de 9 tables de reference et d'une feuille de code source:
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \texttt{RU\_ModeleNotation}: 2 modeles de notation actifs -- Code 1 = Projet en Creation, Code 2 = Projet en Extension;
+  \item \texttt{RU\_Facteur}: 6 facteurs d'evaluation -- Financier (FIN), Conduite de comptes (ACC), Business (Bus), Management (Man), Industrie (Ind), Psychometrique (Psy);
+  \item \texttt{RU\_FacteursParModele}: ponderation (\%) de chaque facteur selon le modele -- Modele 1: FIN=22\%, ACC=8\%, Business=20\%, Management=15\%, Industrie=15\%, Psy=20\%; Modele 2 (sans facteur Psy): FIN=40\%, ACC=20\%, Business=15\%, Management=15\%, Industrie=10\%;
+  \item \texttt{RU\_SousFacteur}: 61 sous-facteurs, criteres detailles au sein de chaque facteur (libelle, nature et type de valeur, disponibilite);
+  \item \texttt{RU\_SousFacteurParModele}: 71 lignes de configuration (priorite relative, caractere eliminatoire, caractere obligatoire, score minimum hors criteres eliminatoires) liant chaque sous-facteur a un modele;
+  \item \texttt{RU\_Critere}: 133 valeurs de reponse possibles pour les sous-facteurs;
+  \item \texttt{RU\_CritereNotes}: 327 regles de notation, associant a chaque triplet (critere, sous-facteur, modele) une note (y compris la note eliminatoire \texttt{-9999} qui bloque le dossier);
+  \item \texttt{RUTypeValeur} / \texttt{RU\_NatureValeur}: typage des valeurs saisies (numerique, pourcentage, oui/non, liste, fourchette, ...);
+  \item feuille \emph{Code source calcul de notation}: implementation C\# des deux methodes du moteur, \texttt{ScoringNotesByProject()} (calcul du score final normalise 0--200 pour un dossier, scenarios Good/Average) et \texttt{CalculWeightsDesSousFacteurs()} (calcul du poids reel de chaque sous-facteur a partir de sa priorite et du poids de son facteur parent).
+\end{itemize}
+
+Le script \texttt{scripts/generate\_dataset.py} reimplemente fidelement ce moteur (memes ponderations, meme normalisation 0--200, memes deux scenarios) pour produire, pour chaque dossier synthetique genere: \texttt{score\_bfpme\_good}, \texttt{score\_bfpme\_average} et \texttt{risk\_class}. Ces trois sorties, directement issues du moteur \texttt{BTS\_INFO}, sont ensuite reinjectees dans \texttt{generate\_dataset\_final.py} pour construire le risque latent (voir section~3.2).
 
 \subsection{Structure du dataset final}
 
@@ -264,6 +284,12 @@ Chaque notebook entraine:
   \item \texttt{XGBoost} (ou fallback GradientBoosting si xgboost indisponible)
 \end{itemize}
 
+En complement, un troisieme algorithme de gradient boosting, \texttt{LightGBM}, a ete evalue
+a titre de candidat additionnel sur le perimetre de l'option C (notebook
+\texttt{notebook/classification\_option\_C\_lightgbm.ipynb}), sur le meme protocole
+(meme split, meme graine aleatoire, memes metriques) afin de comparer uniquement l'effet de
+l'algorithme.
+
 \subsection{Option A -- All Features}
 \textbf{Objectif}
 \begin{itemize}[leftmargin=1.2cm]
@@ -313,6 +339,39 @@ Deux regimes d'evaluation ont ete utilises.
 \subsection{Premiere generation (\texttt{dataset\_final.csv}, cible \texttt{default\_flag})}
 
 Les metriques etaient tres elevees (accuracy/F1/AUC souvent autour de 0.96--0.99) sur les trois options, avec des ecarts modestes entre RandomForest et XGBoost.
+
+\paragraph{Candidat additionnel: LightGBM (perimetre Option C).}
+Le notebook \texttt{notebook/classification\_option\_C\_lightgbm.ipynb} ajoute \texttt{LGBMClassifier}
+comme troisieme candidat, evalue sur le meme perimetre de variables que l'Option C
+(\texttt{final\_dataset.csv}, cible \texttt{default\_flag}, split stratifie 80/20,
+\texttt{random\_state=42}), aux cotes de RandomForest et XGBoost. Ses hyperparametres reprennent
+les memes ordres de grandeur que XGBoost (\texttt{n\_estimators=500}, \texttt{max\_depth=5},
+\texttt{learning\_rate=0.05}, \texttt{subsample=0.85}, \texttt{colsample\_bytree=0.85}), avec le
+parametre propre \texttt{num\_leaves=31}. Le tableau~\ref{tab:lightgbm_v1} reprend la sortie reelle
+du notebook (triee par AUC decroissante).
+
+\begin{table}[h]
+  \centering
+  \caption{RandomForest / XGBoost / LightGBM -- perimetre Option C, \texttt{final\_dataset.csv} (sortie notebook).}
+  \label{tab:lightgbm_v1}
+  \begin{tabular}{lrrrrr}
+    \toprule
+    Modele & Accuracy & Precision & Recall & F1 & AUC \\
+    \midrule
+    RandomForest & 0.8555 & 0.870599 & 0.874447 & 0.872519 & 0.891187 \\
+    XGBoost      & 0.8545 & 0.868421 & 0.875332 & 0.871863 & 0.888968 \\
+    LightGBM     & 0.8540 & 0.868306 & 0.874447 & 0.871366 & 0.885073 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+LightGBM se situe dans le meme ordre de grandeur que RandomForest et XGBoost sur les cinq
+metriques, sans les depasser (AUC 0,885 contre 0,891 pour RandomForest et 0,889 pour XGBoost).
+L'ecart etant faible et potentiellement du bruit d'echantillonnage, il ne justifie pas a lui
+seul un changement de modele deploye; un re-entrainement sur plusieurs \texttt{random\_state}
+serait necessaire pour confirmer la stabilite de ce classement avant toute decision. A noter que
+\texttt{shap.TreeExplainer} supporte nativement LightGBM au meme titre que XGBoost: un
+remplacement futur n'imposerait donc pas de reconstruire la couche d'explicabilite.
 
 \subsection{Generation realiste (\texttt{dataset\_final\_realism\_v2.csv}, cible \texttt{default\_flag\_v2})}
 
@@ -459,6 +518,11 @@ Utiliser par defaut les exports temporels v2 comme base commune de comparaison A
     \item \texttt{notebook/classification\_option\_A\_all\_features.ipynb}
     \item \texttt{notebook/classification\_option\_B\_without\_bfpme.ipynb}
     \item \texttt{notebook/classification\_option\_C\_hybrid\_min\_bfpme.ipynb}
+  \end{itemize}
+
+  \item Candidat additionnel LightGBM (perimetre Option C):
+  \begin{itemize}
+    \item \texttt{notebook/classification\_option\_C\_lightgbm.ipynb}
   \end{itemize}
 \end{itemize}
 

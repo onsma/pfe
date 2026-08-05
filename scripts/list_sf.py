@@ -1,5 +1,4 @@
 import sys, io
-sys.path.insert(0, 'd:/BFPME/tmp_pip')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 import openpyxl
 wb = openpyxl.load_workbook('BTS_INFO.xlsx')

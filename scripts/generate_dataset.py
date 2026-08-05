@@ -8,9 +8,6 @@ for each dossier using the exact formula from ScoringService.cs.
 Output: bfpme_synthetic_dataset.csv
 """
 
-import sys
-sys.path.insert(0, 'd:/BFPME/tmp_pip')
-
 import random
 import math
 import csv

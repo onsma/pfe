@@ -17,10 +17,14 @@ REQUIREMENTS
 
 Open a PowerShell terminal and run:
 
-    cd d:\BFPME\backend
+    cd c:\pfe\backend
+    python -m venv .venv
+    .venv\Scripts\Activate.ps1
     pip install -r requirements.txt
 
 This installs FastAPI, uvicorn, XGBoost, SHAP, scikit-learn, httpx, etc.
+The virtual environment lives at c:\pfe\backend\.venv — activate it
+(.venv\Scripts\Activate.ps1) in every new terminal before running uvicorn.
 
 
 ================================================================================
@@ -83,7 +87,8 @@ Example:
 
 Open a NEW PowerShell terminal and run:
 
-    cd d:\BFPME\backend
+    cd c:\pfe\backend
+    .venv\Scripts\Activate.ps1
     python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 Wait until you see:
@@ -93,12 +98,12 @@ Wait until you see:
 
 Leave this terminal open. The --reload flag auto-restarts on code changes.
 
-IMPORTANT: The .env file at d:\BFPME\backend\.env controls all settings.
+IMPORTANT: The .env file at c:\pfe\backend\.env controls all settings.
            Current configuration:
              LLM_ENABLED   = true
              LLM_MODEL     = qwen2.5:7b
              LLM_BASE_URL  = http://127.0.0.1:11434/v1
-             MODEL_ARTIFACT_PATH = d:/BFPME/data/option_c_xgboost_model.joblib
+             MODEL_ARTIFACT_PATH = c:/pfe/data/option_c_xgboost_model.joblib
 
 
 ================================================================================
@@ -179,7 +184,7 @@ NOTE: The first LLM call after starting Ollama may take 30–90 seconds while
 
 If you want to retrain XGBoost on a new dataset:
 
-    cd d:\BFPME
+    cd c:\pfe
     python scripts\train_option_c_xgboost.py
 
 Then reload the artifact without restarting the server:
@@ -191,11 +196,11 @@ Then reload the artifact without restarting the server:
   OPTIONAL — RUN THE IFRS 9 ECL PIPELINE
 ================================================================================
 
-    cd d:\BFPME
+    cd c:\pfe
     python scripts\generate_ifrs9_no_staging.py
     python scripts\ifrs9_ecl_synthesis.py
 
-Output files are written to  d:\BFPME\dataset_IFRS9\
+Output files are written to  c:\pfe\dataset_IFRS9\
 
 
 ================================================================================
@@ -217,7 +222,7 @@ Problem:  Port 8000 already in use
 Fix:      See STEP 3 above.
 
 Problem:  Model artifact not found
-Fix:      Check that  d:\BFPME\data\option_c_xgboost_model.joblib  exists.
+Fix:      Check that  c:\pfe\data\option_c_xgboost_model.joblib  exists.
           If missing, retrain:  python scripts\train_option_c_xgboost.py
 
 
@@ -225,7 +230,7 @@ Fix:      Check that  d:\BFPME\data\option_c_xgboost_model.joblib  exists.
   FILE LAYOUT (reference)
 ================================================================================
 
-  d:\BFPME\
+  c:\pfe\
   ├── backend\
   │   ├── .env                        ← all configuration (edit this)
   │   ├── app\

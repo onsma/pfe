@@ -18,8 +18,8 @@ def clip_series(s, low=None, high=None):
     return s
 
 
-base_path = r"d:\BFPME\data\bfpme_synthetic_dataset.csv"
-output_path = r"d:\BFPME\data\dataset_final.csv"
+base_path = r"c:\pfe\data\bfpme_synthetic_dataset.csv"
+output_path = r"c:\pfe\data\dataset_final.csv"
 
 df = pd.read_csv(base_path)
 out = df.copy()
