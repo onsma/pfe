@@ -840,12 +840,13 @@ function renderStressParams(fieldNames) {
 // the top SHAP-ranked fields for THIS client — but only the ones that are
 // genuine raw inputs (see SHOCKABLE_FIELDS comment above), so the sliders
 // stay meaningful for the client actually loaded rather than a fixed list.
+const MAX_SHAP_STRESS_FIELDS = 10;
 function updateStressParamsFromShap(contribs) {
   const matched = [];
   for (const c of contribs) {
     const name = c.feature.replace(/^(plain_num__|winsor_num__|cat__|ord__|nom__)/, '');
     if (SHOCKABLE_FIELDS[name] && !matched.includes(name)) matched.push(name);
-    if (matched.length >= 5) break;
+    if (matched.length >= MAX_SHAP_STRESS_FIELDS) break;
   }
   const hint = document.getElementById('stressParamsSource');
   if (matched.length >= 2) {

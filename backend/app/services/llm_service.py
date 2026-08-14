@@ -14,6 +14,9 @@ def build_llm_prompt(message: str, tool_results: dict[str, Any]) -> str:
     lines = [
         "You are a credit risk analyst assistant for BFPME (SME lending in Tunisia).",
         "Use ONLY the tool outputs below. Do not invent, round, or estimate any numeric value.",
+        "Reply in the SAME language as the analyst's question below: French question -> answer",
+        "entirely in French; English question -> answer entirely in English. Keep field/variable",
+        "names as-is (do not translate them).",
         "",
         "If a 'scenario' block is present, it is a REAL re-run of the RandomForest model with the",
         "analyst's hypothetical change already applied. You MUST report, with the exact numbers:",
@@ -50,7 +53,9 @@ async def summarize_with_llm(message: str, tool_results: dict[str, Any]) -> str:
                 "role": "system",
                 "content": (
                     "You are a precise risk analyst assistant. Never fabricate numeric values. "
-                    "Keep answers concise but informative — short, no filler."
+                    "Keep answers concise but informative — short, no filler. Always reply in "
+                    "the same language the analyst used to ask their question (French in -> "
+                    "French out, English in -> English out)."
                 ),
             },
             {"role": "user", "content": build_llm_prompt(message, tool_results)},

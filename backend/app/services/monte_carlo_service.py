@@ -50,6 +50,9 @@ def _build_sample_frame(
         # Financial magnitudes (base >= 0) must not flip negative; rates may.
         if b >= 0:
             values = np.clip(values, 0.0, None)
+        # Shocked values are always float; widen the column first so
+        # assigning into an originally-int64 base column isn't lossy.
+        frame[shock.field] = frame[shock.field].astype(float)
         frame.loc[1:, shock.field] = values
         sampled[shock.field] = values
 

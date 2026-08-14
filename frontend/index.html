@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Plateforme de Risque de Crédit pilotée par l'IA pour Banques</title>
-  <link rel="stylesheet" href="/dashboard/static/styles.css?v=6" />
+  <link rel="stylesheet" href="/dashboard/static/styles.css?v=7" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -159,6 +159,18 @@
         <span class="label-influential">●</span>
         Les champs en rouge sont les variables à plus fort impact de leur catégorie, selon l'analyse
         d'importance des variables du modèle déployé — les modifier fait le plus varier la PD prédite.
+        Ce classement est choisi à partir de l'indice de Gini de chaque variable dans le modèle entraîné.
+        <span class="info-tip tip-below">
+          <span class="info-tip-icon" role="button" tabindex="0" aria-label="Qu'est-ce que l'indice de Gini ?">ⓘ</span>
+          <span class="info-tip-bubble">
+            L'indice de Gini mesure, à chaque division d'un arbre de décision, à quel point les dossiers
+            qui en ressortent sont « purs » (majoritairement défaut ou majoritairement non-défaut) plutôt
+            que mélangés. Une variable est jugée importante si, cumulée sur les 400 arbres du modèle, elle
+            a permis de réduire fortement ce mélange à chaque fois qu'elle a été utilisée pour diviser les
+            dossiers. C'est une mesure globale, calculée une seule fois à l'entraînement — pas propre à un
+            client précis (contrairement aux valeurs SHAP de la page Analyse SHAP).
+          </span>
+        </span>
       </div>
 
       <div class="pred-layout">
@@ -511,8 +523,8 @@
           </div>
           <div class="shap-top-row">
             <label class="small-label">Top K variables</label>
-            <input type="range" id="shapTopK" min="3" max="15" value="8" />
-            <span id="shapTopKVal">8</span>
+            <input type="range" id="shapTopK" min="3" max="15" value="12" />
+            <span id="shapTopKVal">12</span>
           </div>
           <button class="btn-primary full-width" id="btnExplain">
             <span class="btn-icon">🔬</span> Expliquer le Dernier Client
@@ -830,6 +842,6 @@
 
   </main>
 
-  <script src="/dashboard/static/app.js?v=6"></script>
+  <script src="/dashboard/static/app.js?v=7"></script>
 </body>
 </html>

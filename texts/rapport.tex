@@ -31,6 +31,7 @@
 % ── Graphiques ───────────────────────────────────────────────
 \usepackage{graphicx}
 \usepackage{float}                 % placement [H] strict des flottants
+\usepackage{pdflscape}              % pages en paysage pour les diagrammes très larges
 \usepackage{tikz}
 \usepackage{pgffor}
 \usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit, backgrounds}
@@ -1676,9 +1677,9 @@ les outils analytiques en fonction des indicateurs portés par la requête
 figure~\ref{fig:seq_chat} (diagramme de séquence, non modifié) en détaille les
 échanges.
 
-\begin{figure}[H]
+\begin{figure}[p]
   \centering
-  \includegraphics[width=0.95\textwidth]{sequence_chat_analyze}
+  \includegraphics[width=\textwidth, height=0.92\textheight, keepaspectratio]{sequence_chat_analyze}
   \caption{Diagramme de séquence de l'orchestration \texttt{/chat/analyze}}
   \label{fig:seq_chat}
 \end{figure}
@@ -1763,7 +1764,7 @@ simuler un scénario, lancer un test de stress et dialoguer en langage naturel.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\textwidth]{diagramme_cas_utilisation}
+  \includegraphics[width=\textwidth, height=0.85\textheight, keepaspectratio]{diagramme_cas_utilisation}
   \caption{Diagramme de cas d'utilisation de la plateforme}
   \label{fig:uc}
 \end{figure}
@@ -1772,14 +1773,18 @@ simuler un scénario, lancer un test de stress et dialoguer en langage naturel.
 
 Le diagramme de classes (figure~\ref{fig:classes_donnees}) formalise les entités du
 domaine et les composants de service (préprocesseur, modèle, explicateur,
-orchestrateur) ainsi que leurs relations.
+orchestrateur) ainsi que leurs relations. Sa largeur importante — routeurs,
+services, dépôt d'artefacts et schémas Pydantic déployés côte à côte — justifie une
+présentation en page paysage pour rester lisible.
 
-\begin{figure}[H]
+\begin{landscape}
+\begin{figure}[p]
   \centering
-  \includegraphics[width=0.95\textwidth]{diagramme_classes}
+  \includegraphics[width=\linewidth, height=0.9\textheight, keepaspectratio]{diagramme_classes}
   \caption{Diagramme de classes du système}
   \label{fig:classes_donnees}
 \end{figure}
+\end{landscape}
 
 \subsection{Diagramme de déploiement}
 
@@ -1789,7 +1794,7 @@ local (Ollama) et le navigateur client hébergeant le tableau de bord.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\textwidth]{diagramme_deploiement}
+  \includegraphics[width=\textwidth, height=0.85\textheight, keepaspectratio]{diagramme_deploiement}
   \caption{Diagramme de déploiement de la plateforme}
   \label{fig:deploiement}
 \end{figure}

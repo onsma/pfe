@@ -617,6 +617,16 @@ select { cursor: pointer; }
   border: 6px solid transparent;
   border-top-color: var(--text);
 }
+.info-tip.tip-below .info-tip-bubble {
+  bottom: auto;
+  top: calc(100% + 10px);
+}
+.info-tip.tip-below .info-tip-bubble::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--text);
+}
 .info-tip.open .info-tip-bubble { display: block; }
 .rstat-value { font-size: 15px; font-weight: 700; color: var(--text); }
 .rstat-value.danger  { color: var(--danger); }
